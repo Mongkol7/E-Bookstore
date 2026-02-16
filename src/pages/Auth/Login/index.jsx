@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost/Ecommerce/public';
+  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -263,3 +263,4 @@ function Login() {
 }
 
 export default Login;
+

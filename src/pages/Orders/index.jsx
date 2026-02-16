@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost/Ecommerce/public';
+  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
 
 function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -96,3 +96,4 @@ function OrdersPage() {
 }
 
 export default OrdersPage;
+

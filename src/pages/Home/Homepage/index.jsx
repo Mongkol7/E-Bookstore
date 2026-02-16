@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost/Ecommerce/public';
+  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
 
 function HomePage() {
   const [profile, setProfile] = useState({
@@ -453,3 +453,4 @@ function HomePage() {
 }
 
 export default HomePage;
+

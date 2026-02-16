@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost/Ecommerce/public';
+  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
 
 const COUNTRY_OPTIONS = [
   'United States',
@@ -913,4 +913,5 @@ function CheckoutPage() {
 }
 
 export default CheckoutPage;
+
 

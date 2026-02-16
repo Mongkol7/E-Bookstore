@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost/Ecommerce/public';
+  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
 
 function OrderDetailPage() {
   // In a real app, you'd fetch this based on useParams().orderId
@@ -625,3 +625,4 @@ function OrderDetailPage() {
 }
 
 export default OrderDetailPage;
+
