@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { logoutAndRedirect } from '../../../utils/auth';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
 
 function HomePage() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState({
     name: 'Unknown User',
     role: 'Guest',
@@ -54,6 +56,15 @@ function HomePage() {
           method: 'GET',
           credentials: 'include',
         });
+
+        if (response.status === 401) {
+          localStorage.removeItem('auth_user');
+          setProfile({
+            name: 'Unknown User',
+            role: 'Guest',
+          });
+          return;
+        }
 
         if (!response.ok) {
           fallbackFromLocalStorage();
@@ -144,6 +155,19 @@ function HomePage() {
 
       const rawText = await response.text();
       const payload = rawText ? JSON.parse(rawText) : {};
+
+      if (response.status === 401) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Session Expired',
+          text: 'Please log in again.',
+          background: '#0f172a',
+          color: '#e2e8f0',
+          confirmButtonColor: '#10b981',
+        });
+        logoutAndRedirect(navigate);
+        return;
+      }
 
       if (!response.ok) {
         await Swal.fire({

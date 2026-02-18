@@ -1,14 +1,31 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { logoutAndRedirect } from '../../utils/auth';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
 
 function CartPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [cartItems, setCartItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingIds, setUpdatingIds] = useState({});
+  const [showOrderHistoryHighlight, setShowOrderHistoryHighlight] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.orderPlaced) {
+      setShowOrderHistoryHighlight(true);
+      const timer = setTimeout(() => {
+        setShowOrderHistoryHighlight(false);
+      }, 15000);
+
+      return () => clearTimeout(timer);
+    }
+
+    return undefined;
+  }, [location.state]);
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -23,6 +40,11 @@ function CartPage() {
 
         const rawText = await response.text();
         const payload = rawText ? JSON.parse(rawText) : {};
+
+        if (response.status === 401) {
+          logoutAndRedirect(navigate);
+          return;
+        }
 
         if (!response.ok) {
           setError(payload?.error || 'Unable to load cart');
@@ -70,6 +92,11 @@ function CartPage() {
       const rawText = await response.text();
       const payload = rawText ? JSON.parse(rawText) : {};
 
+      if (response.status === 401) {
+        logoutAndRedirect(navigate);
+        return;
+      }
+
       if (!response.ok) {
         setError(payload?.error || 'Unable to update quantity');
         return;
@@ -99,6 +126,11 @@ function CartPage() {
 
       const rawText = await response.text();
       const payload = rawText ? JSON.parse(rawText) : {};
+
+      if (response.status === 401) {
+        logoutAndRedirect(navigate);
+        return;
+      }
 
       if (!response.ok) {
         setError(payload?.error || 'Unable to remove item');
@@ -155,8 +187,19 @@ function CartPage() {
             </div>
             <Link
               to="/orders"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700/60 bg-slate-800/40 text-slate-200 hover:border-emerald-500/40 hover:text-white transition-colors text-sm"
+              state={showOrderHistoryHighlight ? { highlightLatestOrder: true } : undefined}
+              className={`relative inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-slate-800/40 text-slate-200 hover:text-white transition-colors text-sm ${
+                showOrderHistoryHighlight
+                  ? 'border-emerald-400 text-emerald-200 shadow-[0_0_0_2px_rgba(16,185,129,0.9),0_0_30px_rgba(16,185,129,0.75),0_0_60px_rgba(16,185,129,0.45)]'
+                  : 'border-slate-700/60 hover:border-emerald-500/40'
+              }`}
             >
+              {showOrderHistoryHighlight && (
+                <>
+                  <span className="pointer-events-none absolute -inset-2 rounded-xl bg-emerald-400/25 blur-md animate-pulse"></span>
+                  <span className="pointer-events-none absolute -inset-1 rounded-xl border-2 border-emerald-400/90 animate-pulse"></span>
+                </>
+              )}
               Order History
             </Link>
           </div>

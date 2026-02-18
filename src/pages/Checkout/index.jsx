@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { logoutAndRedirect } from '../../utils/auth';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
@@ -124,6 +125,11 @@ function CheckoutPage() {
           credentials: 'include',
         });
 
+        if (response.status === 401) {
+          logoutAndRedirect(navigate);
+          return;
+        }
+
         if (!response.ok) {
           return;
         }
@@ -175,8 +181,11 @@ function CheckoutPage() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (currentStep < 3) {
+      setCurrentStep(3);
+      return;
+    }
 
     if (checkoutItems.length === 0) {
       await Swal.fire({
@@ -217,6 +226,11 @@ function CheckoutPage() {
       const rawText = await response.text();
       const payload = rawText ? JSON.parse(rawText) : {};
 
+      if (response.status === 401) {
+        logoutAndRedirect(navigate);
+        return;
+      }
+
       if (!response.ok) {
         await Swal.fire({
           icon: 'error',
@@ -249,7 +263,7 @@ function CheckoutPage() {
       confirmButtonColor: '#10b981',
     });
 
-    navigate('/cart');
+    navigate('/cart', { state: { orderPlaced: true } });
   };
 
   return (
@@ -355,7 +369,7 @@ function CheckoutPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => e.preventDefault()}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {/* Main Form */}
             <div className="lg:col-span-2">
@@ -802,7 +816,8 @@ function CheckoutPage() {
                     </button>
                   ) : (
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={handleSubmit}
                       className="flex-1 px-4 py-3 sm:py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-900 font-semibold rounded-lg sm:rounded-xl hover:from-emerald-400 hover:to-emerald-500 transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation active:scale-95"
                     >
                       Place Order

@@ -1,13 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { logoutAndRedirect } from '../../utils/auth';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
 
 function OrdersPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [highlightLatestOrder, setHighlightLatestOrder] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.highlightLatestOrder) {
+      setHighlightLatestOrder(true);
+      const timer = setTimeout(() => {
+        setHighlightLatestOrder(false);
+      }, 15000);
+
+      return () => clearTimeout(timer);
+    }
+
+    return undefined;
+  }, [location.state]);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -22,6 +39,11 @@ function OrdersPage() {
 
         const rawText = await response.text();
         const payload = rawText ? JSON.parse(rawText) : {};
+
+        if (response.status === 401) {
+          logoutAndRedirect(navigate);
+          return;
+        }
 
         if (!response.ok) {
           setError(payload?.error || 'Unable to load order history');
@@ -75,8 +97,18 @@ function OrdersPage() {
               <Link
                 key={order.id}
                 to={`/orders/${order.id}`}
-                className="block bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 hover:border-emerald-500/40 transition-colors"
+                className={`relative block rounded-xl p-4 transition-colors ${
+                  highlightLatestOrder && orders[0]?.id === order.id
+                    ? 'bg-slate-900/60 border border-emerald-400/90 shadow-[0_0_0_2px_rgba(16,185,129,0.9),0_0_30px_rgba(16,185,129,0.75),0_0_60px_rgba(16,185,129,0.45)]'
+                    : 'bg-slate-900/50 border border-slate-700/50 hover:border-emerald-500/40'
+                }`}
               >
+                {highlightLatestOrder && orders[0]?.id === order.id && (
+                  <>
+                    <span className="pointer-events-none absolute -inset-2 rounded-xl bg-emerald-400/25 blur-md animate-pulse"></span>
+                    <span className="pointer-events-none absolute -inset-1 rounded-xl border-2 border-emerald-400/90 animate-pulse"></span>
+                  </>
+                )}
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white font-semibold">{order.orderNumber || `Order #${order.id}`}</p>

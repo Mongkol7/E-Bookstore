@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { logoutAndRedirect } from '../../utils/auth';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
@@ -7,6 +8,7 @@ const API_BASE_URL =
 function OrderDetailPage() {
   // In a real app, you'd fetch this based on useParams().orderId
   const { orderId } = useParams();
+  const navigate = useNavigate();
 
   const [sampleOrder] = useState({
     id: 1,
@@ -127,6 +129,11 @@ function OrderDetailPage() {
 
         const rawText = await response.text();
         const payload = rawText ? JSON.parse(rawText) : {};
+
+        if (response.status === 401) {
+          logoutAndRedirect(navigate);
+          return;
+        }
 
         if (!response.ok || !payload?.order) {
           return;
