@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
+import { buildApiUrl, parseJsonResponse } from '../../../utils/api';
+import { saveAuthToken } from '../../../utils/auth';
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -10,6 +9,7 @@ function Login() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,7 +19,7 @@ function Login() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/login`, {
+      const response = await fetch(buildApiUrl('/api/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -28,12 +28,15 @@ function Login() {
         body: JSON.stringify({ email, password }),
       });
 
-      const rawText = await response.text();
-      const payload = rawText ? JSON.parse(rawText) : {};
+      const payload = await parseJsonResponse(response);
 
       if (!response.ok) {
         setError(payload.error || 'Login failed');
         return;
+      }
+
+      if (payload?.token) {
+        saveAuthToken(payload.token, rememberMe);
       }
 
       const role = (payload?.user?.role || 'Customer').toLowerCase();
@@ -191,6 +194,16 @@ function Login() {
                   </Link>
                 </div>
               </div>
+
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-800/50 text-emerald-500 focus:ring-emerald-500/40"
+                />
+                Remember me
+              </label>
             </div>
 
             {error && (

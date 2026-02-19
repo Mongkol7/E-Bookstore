@@ -2,9 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { logoutAndRedirect } from '../../utils/auth';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
+import { apiFetch, parseJsonResponse } from '../../utils/api';
 
 const COUNTRY_OPTIONS = [
   'United States',
@@ -120,10 +118,7 @@ function CheckoutPage() {
   useEffect(() => {
     const autofillShipping = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          method: 'GET',
-          credentials: 'include',
-        });
+        const response = await apiFetch('/api/auth/profile', { method: 'GET' });
 
         if (response.status === 401) {
           logoutAndRedirect(navigate);
@@ -200,12 +195,11 @@ function CheckoutPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart/checkout`, {
+      const response = await apiFetch('/api/cart/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           shippingAddress: {
             name: `${formData.firstName} ${formData.lastName}`.trim(),
@@ -223,8 +217,7 @@ function CheckoutPage() {
         }),
       });
 
-      const rawText = await response.text();
-      const payload = rawText ? JSON.parse(rawText) : {};
+      const payload = await parseJsonResponse(response);
 
       if (response.status === 401) {
         logoutAndRedirect(navigate);

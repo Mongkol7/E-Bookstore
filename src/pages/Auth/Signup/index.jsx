@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
+import { buildApiUrl, parseJsonResponse } from '../../../utils/api';
 
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -26,7 +24,7 @@ function Signup() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/customers/post`, {
+      const response = await fetch(buildApiUrl('/api/customers/post'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,8 +40,7 @@ function Signup() {
         }),
       });
 
-      const rawText = await response.text();
-      const payload = rawText ? JSON.parse(rawText) : {};
+      const payload = await parseJsonResponse(response);
 
       if (!response.ok) {
         setError(payload.error || 'Signup failed');

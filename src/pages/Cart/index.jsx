@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { logoutAndRedirect } from '../../utils/auth';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
+import { apiFetch, parseJsonResponse } from '../../utils/api';
 
 function CartPage() {
   const navigate = useNavigate();
@@ -33,13 +31,8 @@ function CartPage() {
       setError('');
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/cart`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-
-        const rawText = await response.text();
-        const payload = rawText ? JSON.parse(rawText) : {};
+        const response = await apiFetch('/api/cart', { method: 'GET' });
+        const payload = await parseJsonResponse(response);
 
         if (response.status === 401) {
           logoutAndRedirect(navigate);
@@ -77,20 +70,17 @@ function CartPage() {
 
     setUpdatingIds((prev) => ({ ...prev, [id]: true }));
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart/quantity`, {
+      const response = await apiFetch('/api/cart/quantity', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           book_id: id,
           quantity: newQuantity,
         }),
       });
-
-      const rawText = await response.text();
-      const payload = rawText ? JSON.parse(rawText) : {};
+      const payload = await parseJsonResponse(response);
 
       if (response.status === 401) {
         logoutAndRedirect(navigate);
@@ -113,19 +103,16 @@ function CartPage() {
   const removeItem = async (id) => {
     setUpdatingIds((prev) => ({ ...prev, [id]: true }));
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart/remove`, {
+      const response = await apiFetch('/api/cart/remove', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           book_id: id,
         }),
       });
-
-      const rawText = await response.text();
-      const payload = rawText ? JSON.parse(rawText) : {};
+      const payload = await parseJsonResponse(response);
 
       if (response.status === 401) {
         logoutAndRedirect(navigate);

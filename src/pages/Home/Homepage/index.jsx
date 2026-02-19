@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { logoutAndRedirect } from '../../../utils/auth';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
+import { clearAuthSession, logoutAndRedirect } from '../../../utils/auth';
+import { apiFetch, parseJsonResponse } from '../../../utils/api';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -52,13 +50,10 @@ function HomePage() {
 
     const fetchProfile = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          method: 'GET',
-          credentials: 'include',
-        });
+        const response = await apiFetch('/api/auth/profile', { method: 'GET' });
 
         if (response.status === 401) {
-          localStorage.removeItem('auth_user');
+          clearAuthSession();
           setProfile({
             name: 'Unknown User',
             role: 'Guest',
@@ -90,13 +85,8 @@ function HomePage() {
       setBooksError('');
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/books`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-
-        const rawText = await response.text();
-        const data = rawText ? JSON.parse(rawText) : [];
+        const response = await apiFetch('/api/books', { method: 'GET' });
+        const data = await parseJsonResponse(response);
 
         if (!response.ok) {
           setBooks([]);
@@ -120,14 +110,13 @@ function HomePage() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${API_BASE_URL}/api/logout`, {
+      await apiFetch('/api/logout', {
         method: 'POST',
-        credentials: 'include',
       });
     } catch {
       // No-op: we still clear local state for UX consistency.
     } finally {
-      localStorage.removeItem('auth_user');
+      clearAuthSession();
       setProfile({
         name: 'Unknown User',
         role: 'Guest',
@@ -141,20 +130,18 @@ function HomePage() {
     setAddingBookIds((prev) => ({ ...prev, [bookId]: true }));
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart/add`, {
+      const response = await apiFetch('/api/cart/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           book_id: bookId,
           quantity: 1,
         }),
       });
 
-      const rawText = await response.text();
-      const payload = rawText ? JSON.parse(rawText) : {};
+      const payload = await parseJsonResponse(response);
 
       if (response.status === 401) {
         await Swal.fire({

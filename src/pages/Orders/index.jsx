@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { logoutAndRedirect } from '../../utils/auth';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
+import { apiFetch, parseJsonResponse } from '../../utils/api';
 
 function OrdersPage() {
   const navigate = useNavigate();
@@ -32,13 +30,8 @@ function OrdersPage() {
       setError('');
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/orders`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-
-        const rawText = await response.text();
-        const payload = rawText ? JSON.parse(rawText) : {};
+        const response = await apiFetch('/api/orders', { method: 'GET' });
+        const payload = await parseJsonResponse(response);
 
         if (response.status === 401) {
           logoutAndRedirect(navigate);

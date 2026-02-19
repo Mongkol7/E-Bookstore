@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { logoutAndRedirect } from '../../utils/auth';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://localhost/Ecommerce/public');
+import { apiFetch, parseJsonResponse } from '../../utils/api';
 
 function OrderDetailPage() {
   // In a real app, you'd fetch this based on useParams().orderId
@@ -122,13 +120,8 @@ function OrderDetailPage() {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-
-        const rawText = await response.text();
-        const payload = rawText ? JSON.parse(rawText) : {};
+        const response = await apiFetch(`/api/orders/${orderId}`, { method: 'GET' });
+        const payload = await parseJsonResponse(response);
 
         if (response.status === 401) {
           logoutAndRedirect(navigate);
