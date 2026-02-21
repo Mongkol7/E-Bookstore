@@ -428,7 +428,7 @@ function HomePage() {
             Featured Books
           </h2>
           <div className="mb-5 rounded-xl border border-slate-800/60 bg-slate-900/40 p-3 sm:p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
               <input
                 type="text"
                 value={searchText}
@@ -507,7 +507,7 @@ function HomePage() {
             visibleBooks.length === 0 && (
               <p className="text-slate-300 mb-4">No matching books found.</p>
             )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {booksLoading &&
               Array.from({ length: 8 }).map((_, index) => (
                 <BookCardSkeleton key={`book-skeleton-${index}`} />
@@ -665,4 +665,3 @@ function HomePage() {
 }
 
 export default HomePage;
-
