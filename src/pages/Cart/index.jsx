@@ -11,6 +11,8 @@ function CartPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingIds, setUpdatingIds] = useState({});
+  const [quantityInputs, setQuantityInputs] = useState({});
+  const [quantityErrors, setQuantityErrors] = useState({});
   const [showOrderHistoryHighlight, setShowOrderHistoryHighlight] = useState(false);
 
   useEffect(() => {
@@ -57,6 +59,15 @@ function CartPage() {
 
     fetchCart();
   }, []);
+
+  useEffect(() => {
+    const nextInputs = {};
+    cartItems.forEach((item) => {
+      nextInputs[item.id] = String(item.quantity ?? 1);
+    });
+    setQuantityInputs(nextInputs);
+    setQuantityErrors({});
+  }, [cartItems]);
 
   const subtotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -131,6 +142,65 @@ function CartPage() {
     } finally {
       setUpdatingIds((prev) => ({ ...prev, [id]: false }));
     }
+  };
+
+  const validateQuantityInput = (item, value) => {
+    if (!/^\d+$/.test(value)) return 'Please enter digits only';
+
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed < 1) return 'Quantity must be at least 1';
+
+    const stock = Number(item.stock);
+    if (Number.isFinite(stock) && parsed > stock) {
+      return `Only ${stock} in stock`;
+    }
+
+    return '';
+  };
+
+  const handleQuantityInputChange = (item, value) => {
+    setQuantityInputs((prev) => ({ ...prev, [item.id]: value }));
+
+    if (value === '') {
+      setQuantityErrors((prev) => ({ ...prev, [item.id]: 'Quantity is required' }));
+      return;
+    }
+
+    const validationMessage = validateQuantityInput(item, value);
+    setQuantityErrors((prev) => ({ ...prev, [item.id]: validationMessage }));
+  };
+
+  const commitQuantityInput = async (item) => {
+    const rawValue = quantityInputs[item.id] ?? String(item.quantity ?? 1);
+
+    const validationMessage = validateQuantityInput(item, rawValue);
+    if (validationMessage) {
+      setQuantityErrors((prev) => ({ ...prev, [item.id]: validationMessage }));
+      setQuantityInputs((prev) => ({
+        ...prev,
+        [item.id]: String(item.quantity ?? 1),
+      }));
+      return;
+    }
+
+    setQuantityErrors((prev) => ({ ...prev, [item.id]: '' }));
+
+    const parsedQuantity = Number.parseInt(rawValue, 10);
+    if (parsedQuantity !== item.quantity) {
+      await updateQuantity(item.id, parsedQuantity);
+    }
+  };
+
+  const updateQuantityWithValidation = async (item, nextQuantity) => {
+    const validationMessage = validateQuantityInput(item, String(nextQuantity));
+    if (validationMessage) {
+      setQuantityErrors((prev) => ({ ...prev, [item.id]: validationMessage }));
+      return;
+    }
+
+    setQuantityErrors((prev) => ({ ...prev, [item.id]: '' }));
+    setQuantityInputs((prev) => ({ ...prev, [item.id]: String(nextQuantity) }));
+    await updateQuantity(item.id, nextQuantity);
   };
 
   return (
@@ -277,11 +347,23 @@ function CartPage() {
                         </button>
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mt-3 sm:mt-4">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <span className="text-xs sm:text-sm text-slate-400">Qty:</span>
-                          <div className="flex items-center bg-slate-800/50 rounded-lg border border-slate-700/50">
+                        <div>
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <span className="text-xs sm:text-sm text-slate-400">Qty:</span>
+                            <div
+                              className={`flex items-center bg-slate-800/50 rounded-lg border ${
+                                quantityErrors[item.id]
+                                  ? 'border-red-500/60'
+                                  : 'border-slate-700/50'
+                              }`}
+                            >
                             <button
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              onClick={() => {
+                                void updateQuantityWithValidation(
+                                  item,
+                                  item.quantity - 1,
+                                );
+                              }}
                               disabled={!!updatingIds[item.id]}
                               className="px-2 sm:px-3 py-1 sm:py-1.5 text-slate-300 hover:text-emerald-400 transition-colors touch-manipulation disabled:opacity-50"
                               aria-label="Decrease quantity"
@@ -290,9 +372,31 @@ function CartPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                               </svg>
                             </button>
-                            <span className="px-3 sm:px-4 py-1 sm:py-1.5 text-white font-medium text-sm sm:text-base">{item.quantity}</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={quantityInputs[item.id] ?? String(item.quantity ?? 1)}
+                              onChange={(event) => handleQuantityInputChange(item, event.target.value)}
+                              onBlur={() => {
+                                void commitQuantityInput(item);
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.currentTarget.blur();
+                                }
+                              }}
+                              disabled={!!updatingIds[item.id]}
+                              className="w-12 sm:w-14 bg-transparent text-center px-1 py-1 sm:py-1.5 text-white font-medium text-sm sm:text-base outline-none disabled:opacity-50"
+                              aria-label="Quantity"
+                            />
                             <button
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() => {
+                                void updateQuantityWithValidation(
+                                  item,
+                                  item.quantity + 1,
+                                );
+                              }}
                               disabled={!!updatingIds[item.id]}
                               className="px-2 sm:px-3 py-1 sm:py-1.5 text-slate-300 hover:text-emerald-400 transition-colors touch-manipulation disabled:opacity-50"
                               aria-label="Increase quantity"
@@ -301,7 +405,11 @@ function CartPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                               </svg>
                             </button>
+                            </div>
                           </div>
+                          {quantityErrors[item.id] && (
+                            <p className="text-xs text-red-300 mt-1">{quantityErrors[item.id]}</p>
+                          )}
                         </div>
                         <div className="flex items-baseline gap-2">
                           <span className="text-lg sm:text-xl font-bold text-emerald-400">${(item.price * item.quantity).toFixed(2)}</span>
