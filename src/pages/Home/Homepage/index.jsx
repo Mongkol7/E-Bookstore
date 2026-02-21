@@ -19,6 +19,7 @@ function HomePage() {
   const [addingBookIds, setAddingBookIds] = useState({});
   const [filterType, setFilterType] = useState('none');
   const [searchText, setSearchText] = useState('');
+  const [searchScope, setSearchScope] = useState('all');
 
   useEffect(() => {
     const fallbackFromLocalStorage = () => {
@@ -201,6 +202,36 @@ function HomePage() {
     return profile.name.trim().charAt(0).toUpperCase();
   };
 
+  const highlightMatch = (text, field) => {
+    const source = String(text || '');
+    const query = searchText.trim();
+    if (!query) {
+      return source;
+    }
+
+    if (searchScope !== 'all' && searchScope !== field) {
+      return source;
+    }
+
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const matcher = new RegExp(`(${escaped})`, 'ig');
+    const parts = source.split(matcher);
+
+    const normalizedQuery = query.toLowerCase();
+    return parts.map((part, index) =>
+      part.toLowerCase() === normalizedQuery ? (
+        <mark
+          key={`${field}-match-${index}`}
+          className="bg-emerald-400/30 text-emerald-200 rounded px-0.5"
+        >
+          {part}
+        </mark>
+      ) : (
+        <React.Fragment key={`${field}-text-${index}`}>{part}</React.Fragment>
+      )
+    );
+  };
+
   const authorOptions = useMemo(() => {
     const options = new Set();
     books.forEach((book) => {
@@ -220,6 +251,15 @@ function HomePage() {
       const title = String(book.title || '').toLowerCase();
       const author = String(book.author_name || '').toLowerCase();
       const category = String(book.category_name || book.category || '').toLowerCase();
+      if (searchScope === 'name') {
+        return title.includes(query);
+      }
+      if (searchScope === 'author') {
+        return author.includes(query);
+      }
+      if (searchScope === 'category') {
+        return category.includes(query);
+      }
 
       return title.includes(query) || author.includes(query) || category.includes(query);
     });
@@ -256,7 +296,7 @@ function HomePage() {
     }
 
     return copied;
-  }, [books, filterType, searchText]);
+  }, [books, filterType, searchText, searchScope]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
@@ -386,7 +426,7 @@ function HomePage() {
             Featured Books
           </h2>
           <div className="mb-5 rounded-xl border border-slate-800/60 bg-slate-900/40 p-3 sm:p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <input
                 type="text"
                 value={searchText}
@@ -394,6 +434,16 @@ function HomePage() {
                 placeholder="Search by book, author, category"
                 className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
               />
+              <select
+                value={searchScope}
+                onChange={(e) => setSearchScope(e.target.value)}
+                className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              >
+                <option value="all" className="bg-slate-900">Search: All</option>
+                <option value="name" className="bg-slate-900">Search: Book Name</option>
+                <option value="author" className="bg-slate-900">Search: Author</option>
+                <option value="category" className="bg-slate-900">Search: Category</option>
+              </select>
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
@@ -415,7 +465,7 @@ function HomePage() {
                       : filterType === 'trending'
                         ? 'Sorted by most sales (fallback: rating)'
                         : searchText.trim()
-                          ? `Search result for "${searchText.trim()}"`
+                          ? `Search "${searchText.trim()}" in ${searchScope === 'all' ? 'all fields' : searchScope}`
                           : 'Showing default order'}
               </div>
             </div>
@@ -457,19 +507,27 @@ function HomePage() {
                 </div>
                 <div className="p-4 sm:p-5">
                   <h3 className="text-base sm:text-lg font-semibold text-white mb-1 line-clamp-1">
-                    {book.title}
+                    {highlightMatch(book.title, 'name')}
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-400 mb-3">
-                    {book.author_name || 'Unknown Author'}
+                    {highlightMatch(book.author_name || 'Unknown Author', 'author')}
                   </p>
                   <p className="text-xs sm:text-sm text-emerald-400/90 mb-2">
-                    Category: {book.category_name || book.category || 'Unknown Category'}
+                    Category: {highlightMatch(book.category_name || book.category || 'Unknown Category', 'category')}
                   </p>
                   <p className="text-xs sm:text-sm text-slate-300 mb-2 line-clamp-2 min-h-10">
                     {book.description || 'No description available.'}
                   </p>
                   <p className="text-xs sm:text-sm text-slate-400 mb-3">
                     Stock: <span className="text-emerald-400 font-medium">{book.stock ?? 0}</span>
+                  </p>
+                  <p className="text-xs sm:text-sm text-slate-400 mb-3">
+                    Sales:{' '}
+                    <span className="text-emerald-400 font-medium">
+                      {Number.isFinite(Number(book.sales_count ?? book.sold))
+                        ? Number(book.sales_count ?? book.sold).toLocaleString()
+                        : 0}
+                    </span>
                   </p>
                   <div className="flex items-center justify-between mb-3 sm:mb-4">
                     <p className="text-xl sm:text-2xl font-bold text-emerald-400">
