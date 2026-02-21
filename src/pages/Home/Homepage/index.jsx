@@ -338,52 +338,52 @@ function HomePage() {
             </Link>
 
             <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-              className="w-full bg-slate-800/40 border border-slate-700/50 rounded-lg px-3 py-2 text-left hover:border-emerald-500/40 transition-colors flex items-center gap-3"
-            >
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-900 font-bold text-sm flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                {getProfileInitial()}
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm text-slate-200 font-semibold line-clamp-1">
-                  {profile.name}
-                </p>
-                <p className="text-[11px] sm:text-xs text-emerald-400">
-                  Role: {profile.role}
-                </p>
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                className="w-full bg-slate-800/40 border border-slate-700/50 rounded-lg px-3 py-2 text-left hover:border-emerald-500/40 transition-colors flex items-center gap-3"
+              >
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-900 font-bold text-sm flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                  {getProfileInitial()}
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-slate-200 font-semibold line-clamp-1">
+                    {profile.name}
+                  </p>
+                  <p className="text-[11px] sm:text-xs text-emerald-400">
+                    Role: {profile.role}
+                  </p>
+                </div>
+              </button>
 
-            {isProfileMenuOpen && (
-              <div className="absolute right-0 mt-2 w-full sm:w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50 p-2">
-                <Link
-                  to="/login"
-                  onClick={() => setIsProfileMenuOpen(false)}
-                  className="block w-full text-left text-sm text-slate-200 hover:bg-slate-800 rounded-md px-3 py-2 transition-colors"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/signup"
-                  onClick={() => setIsProfileMenuOpen(false)}
-                  className="block w-full text-left text-sm text-slate-200 hover:bg-slate-800 rounded-md px-3 py-2 transition-colors"
-                >
-                  Signup
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProfileMenuOpen(false);
-                    setShowLogoutModal(true);
-                  }}
-                  className="w-full text-left text-sm text-red-300 hover:bg-red-950/40 rounded-md px-3 py-2 transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
+              {isProfileMenuOpen && (
+                <div className="absolute right-0 mt-2 w-full sm:w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50 p-2">
+                  <Link
+                    to="/login"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                    className="block w-full text-left text-sm text-slate-200 hover:bg-slate-800 rounded-md px-3 py-2 transition-colors"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                    className="block w-full text-left text-sm text-slate-200 hover:bg-slate-800 rounded-md px-3 py-2 transition-colors"
+                  >
+                    Signup
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      setShowLogoutModal(true);
+                    }}
+                    className="w-full text-left text-sm text-red-300 hover:bg-red-950/40 rounded-md px-3 py-2 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -396,7 +396,9 @@ function HomePage() {
             onClick={() => setShowLogoutModal(false)}
           ></div>
           <div className="relative w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl">
-            <h3 className="text-lg font-semibold text-white mb-2">Confirm Logout</h3>
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Confirm Logout
+            </h3>
             <p className="text-sm text-slate-300 mb-5">
               Are you sure you want to logout from this account?
             </p>
@@ -439,21 +441,39 @@ function HomePage() {
                 onChange={(e) => setSearchScope(e.target.value)}
                 className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
               >
-                <option value="all" className="bg-slate-900">Search: All</option>
-                <option value="name" className="bg-slate-900">Search: Book Name</option>
-                <option value="author" className="bg-slate-900">Search: Author</option>
-                <option value="category" className="bg-slate-900">Search: Category</option>
+                <option value="all" className="bg-slate-900">
+                  Search: All
+                </option>
+                <option value="name" className="bg-slate-900">
+                  Search: Book Name
+                </option>
+                <option value="author" className="bg-slate-900">
+                  Search: Author
+                </option>
+                <option value="category" className="bg-slate-900">
+                  Search: Category
+                </option>
               </select>
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
                 className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
               >
-                <option value="none" className="bg-slate-900">No Filter</option>
-                <option value="categories" className="bg-slate-900">Categories</option>
-                <option value="authors" className="bg-slate-900">Authors</option>
-                <option value="price" className="bg-slate-900">Price</option>
-                <option value="trending" className="bg-slate-900">Trending (Most Sales)</option>
+                <option value="none" className="bg-slate-900">
+                  No Filter
+                </option>
+                <option value="categories" className="bg-slate-900">
+                  Categories
+                </option>
+                <option value="authors" className="bg-slate-900">
+                  Authors
+                </option>
+                <option value="price" className="bg-slate-900">
+                  Price
+                </option>
+                <option value="trending" className="bg-slate-900">
+                  Trending (Most Sales)
+                </option>
               </select>
               <div className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-slate-300">
                 {filterType === 'authors'
@@ -470,7 +490,9 @@ function HomePage() {
               </div>
             </div>
           </div>
-          {booksLoading && <p className="text-slate-300 mb-4">Loading books...</p>}
+          {booksLoading && (
+            <p className="text-slate-300 mb-4">Loading books...</p>
+          )}
           {!booksLoading && booksError && (
             <p className="text-red-300 bg-red-950/30 border border-red-500/40 rounded-lg px-3 py-2 mb-4">
               {booksError}
@@ -479,9 +501,12 @@ function HomePage() {
           {!booksLoading && !booksError && books.length === 0 && (
             <p className="text-slate-300 mb-4">No books found.</p>
           )}
-          {!booksLoading && !booksError && books.length > 0 && visibleBooks.length === 0 && (
-            <p className="text-slate-300 mb-4">No matching books found.</p>
-          )}
+          {!booksLoading &&
+            !booksError &&
+            books.length > 0 &&
+            visibleBooks.length === 0 && (
+              <p className="text-slate-300 mb-4">No matching books found.</p>
+            )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {booksLoading &&
               Array.from({ length: 8 }).map((_, index) => (
@@ -489,86 +514,100 @@ function HomePage() {
               ))}
             {!booksLoading &&
               visibleBooks.map((book, index) => (
-              <div
-                key={book.id}
-                className="bg-slate-900/50 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden border border-slate-800/50 hover:border-emerald-500/50 transition-all duration-300 hover:scale-105 hover:shadow-emerald-500/10 group"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={
-                      book.image ||
-                      'https://via.placeholder.com/150/0f172a/e2e8f0?text=Book'
-                    }
-                    alt={book.title}
-                    className="w-full h-40 sm:h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60"></div>
-                </div>
-                <div className="p-4 sm:p-5">
-                  <h3 className="text-base sm:text-lg font-semibold text-white mb-1 line-clamp-1">
-                    {highlightMatch(book.title, 'name')}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-400 mb-3">
-                    {highlightMatch(book.author_name || 'Unknown Author', 'author')}
-                  </p>
-                  <p className="text-xs sm:text-sm text-emerald-400/90 mb-2">
-                    Category: {highlightMatch(book.category_name || book.category || 'Unknown Category', 'category')}
-                  </p>
-                  <p className="text-xs sm:text-sm text-slate-300 mb-2 line-clamp-2 min-h-10">
-                    {book.description || 'No description available.'}
-                  </p>
-                  <p className="text-xs sm:text-sm text-slate-400 mb-3">
-                    Stock: <span className="text-emerald-400 font-medium">{book.stock ?? 0}</span>
-                  </p>
-                  <p className="text-xs sm:text-sm text-slate-400 mb-3">
-                    Sales:{' '}
-                    <span className="text-emerald-400 font-medium">
-                      {Number.isFinite(Number(book.sales_count ?? book.sold))
-                        ? Number(book.sales_count ?? book.sold).toLocaleString()
-                        : 0}
-                    </span>
-                  </p>
-                  <div className="flex items-center justify-between mb-3 sm:mb-4">
-                    <p className="text-xl sm:text-2xl font-bold text-emerald-400">
-                      ${Number(book.price || 0).toFixed(2)}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <svg
-                        className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-current"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                      </svg>
-                      <span className="text-xs sm:text-sm text-slate-400">
-                        {Number.isFinite(Number(book.rating))
-                          ? Number(book.rating).toFixed(1)
-                          : 'N/A'}
-                      </span>
-                    </div>
+                <div
+                  key={book.id}
+                  className="bg-slate-900/50 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden border border-slate-800/50 hover:border-emerald-500/50 transition-all duration-300 hover:scale-105 hover:shadow-emerald-500/10 group"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <div className="relative overflow-hidden">
+                    <img
+                      src={
+                        book.image ||
+                        'https://via.placeholder.com/150/0f172a/e2e8f0?text=Book'
+                      }
+                      alt={book.title}
+                      className="w-full h-40 sm:h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60"></div>
                   </div>
-                  <button
-                    onClick={() => handleAddToCart(book.id)}
-                    disabled={!!addingBookIds[book.id]}
-                    className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-900 py-2 sm:py-2.5 px-4 rounded-lg sm:rounded-xl hover:from-emerald-400 hover:to-emerald-500 transition-all duration-200 font-semibold shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 flex items-center justify-center gap-2 group text-sm sm:text-base touch-manipulation active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <svg
-                      className="w-4 h-4 sm:w-5 sm:h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                  <div className="p-4 sm:p-5">
+                    <h3 className="text-base sm:text-lg font-semibold text-white mb-1 line-clamp-1">
+                      {highlightMatch(book.title, 'name')}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-400 mb-3">
+                      {highlightMatch(
+                        book.author_name || 'Unknown Author',
+                        'author',
+                      )}
+                    </p>
+                    <p className="text-xs sm:text-sm text-emerald-400/90 mb-2">
+                      Category:{' '}
+                      {highlightMatch(
+                        book.category_name ||
+                          book.category ||
+                          'Unknown Category',
+                        'category',
+                      )}
+                    </p>
+                    <p className="text-xs sm:text-sm text-slate-300 mb-2 line-clamp-2 min-h-10">
+                      {book.description || 'No description available.'}
+                    </p>
+                    <p className="text-xs sm:text-sm text-slate-400 mb-3">
+                      Sales:{' '}
+                      <span className="text-emerald-400 font-medium">
+                        {Number.isFinite(Number(book.sales_count ?? book.sold))
+                          ? Number(
+                              book.sales_count ?? book.sold,
+                            ).toLocaleString()
+                          : 0}
+                      </span>
+                    </p>
+                    <p className="text-xs sm:text-sm text-slate-400 mb-3">
+                      Stock:{' '}
+                      <span className="text-slate-400 font-medium">
+                        {book.stock ?? 0}
+                      </span>
+                    </p>
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <p className="text-xl sm:text-2xl font-bold text-emerald-400">
+                        ${Number(book.price || 0).toFixed(2)}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-current"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                        </svg>
+                        <span className="text-xs sm:text-sm text-slate-400">
+                          {Number.isFinite(Number(book.rating))
+                            ? Number(book.rating).toFixed(1)
+                            : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAddToCart(book.id)}
+                      disabled={!!addingBookIds[book.id]}
+                      className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-900 py-2 sm:py-2.5 px-4 rounded-lg sm:rounded-xl hover:from-emerald-400 hover:to-emerald-500 transition-all duration-200 font-semibold shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 flex items-center justify-center gap-2 group text-sm sm:text-base touch-manipulation active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                      />
-                    </svg>
-                    {addingBookIds[book.id] ? 'Adding...' : 'Add to Cart'}
-                  </button>
+                      <svg
+                        className="w-4 h-4 sm:w-5 sm:h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                        />
+                      </svg>
+                      {addingBookIds[book.id] ? 'Adding...' : 'Add to Cart'}
+                    </button>
+                  </div>
                 </div>
-              </div>
               ))}
           </div>
         </div>
