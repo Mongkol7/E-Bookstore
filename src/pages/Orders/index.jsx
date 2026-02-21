@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { logoutAndRedirect } from '../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../utils/api';
+import { OrderRowSkeleton } from '../../components/Skeleton';
 
 function OrdersPage() {
   const navigate = useNavigate();
@@ -67,8 +68,10 @@ function OrdersPage() {
         </div>
 
         {loading && (
-          <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 text-slate-300">
-            Loading order history...
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <OrderRowSkeleton key={`order-skeleton-${index}`} />
+            ))}
           </div>
         )}
 

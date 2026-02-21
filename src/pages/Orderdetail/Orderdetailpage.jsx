@@ -357,6 +357,9 @@ function OrderDetailPage() {
                       <p className="text-sm text-slate-400 mb-2">
                         {item.author}
                       </p>
+                      <p className="text-sm text-emerald-400/90 mb-2">
+                        Category: {item.category || 'Unknown Category'}
+                      </p>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-slate-400">
                           Quantity: {item.quantity}

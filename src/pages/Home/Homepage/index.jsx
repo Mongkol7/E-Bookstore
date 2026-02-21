@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { clearAuthSession, logoutAndRedirect } from '../../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../../utils/api';
+import { BookCardSkeleton } from '../../../components/Skeleton';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ function HomePage() {
   const [booksLoading, setBooksLoading] = useState(true);
   const [booksError, setBooksError] = useState('');
   const [addingBookIds, setAddingBookIds] = useState({});
+  const [filterType, setFilterType] = useState('none');
+  const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     const fallbackFromLocalStorage = () => {
@@ -198,6 +201,63 @@ function HomePage() {
     return profile.name.trim().charAt(0).toUpperCase();
   };
 
+  const authorOptions = useMemo(() => {
+    const options = new Set();
+    books.forEach((book) => {
+      const author = (book.author_name || '').trim();
+      if (author) {
+        options.add(author);
+      }
+    });
+    return Array.from(options).sort((a, b) => a.localeCompare(b));
+  }, [books]);
+
+  const visibleBooks = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+    const copied = [...books].filter((book) => {
+      if (!query) return true;
+
+      const title = String(book.title || '').toLowerCase();
+      const author = String(book.author_name || '').toLowerCase();
+      const category = String(book.category_name || book.category || '').toLowerCase();
+
+      return title.includes(query) || author.includes(query) || category.includes(query);
+    });
+
+    if (filterType === 'categories') {
+      copied.sort((a, b) =>
+        String(a.category_name || a.category || '').localeCompare(
+          String(b.category_name || b.category || '')
+        )
+      );
+      return copied;
+    }
+
+    if (filterType === 'authors') {
+      copied.sort((a, b) =>
+        String(a.author_name || '').localeCompare(String(b.author_name || ''))
+      );
+      return copied;
+    }
+
+    if (filterType === 'price') {
+      copied.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+      return copied;
+    }
+
+    if (filterType === 'trending') {
+      // If `sales_count` is unavailable, fallback to rating.
+      copied.sort((a, b) => {
+        const bScore = Number(b.sales_count ?? b.sold ?? b.rating ?? 0);
+        const aScore = Number(a.sales_count ?? a.sold ?? a.rating ?? 0);
+        return bScore - aScore;
+      });
+      return copied;
+    }
+
+    return copied;
+  }, [books, filterType, searchText]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
       {/* Animated background elements */}
@@ -325,9 +385,42 @@ function HomePage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8 tracking-tight">
             Featured Books
           </h2>
-          {booksLoading && (
-            <p className="text-slate-300 mb-4">Loading books...</p>
-          )}
+          <div className="mb-5 rounded-xl border border-slate-800/60 bg-slate-900/40 p-3 sm:p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search by book, author, category"
+                className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              />
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              >
+                <option value="none" className="bg-slate-900">No Filter</option>
+                <option value="categories" className="bg-slate-900">Categories</option>
+                <option value="authors" className="bg-slate-900">Authors</option>
+                <option value="price" className="bg-slate-900">Price</option>
+                <option value="trending" className="bg-slate-900">Trending (Most Sales)</option>
+              </select>
+              <div className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-slate-300">
+                {filterType === 'authors'
+                  ? `${authorOptions.length} authors available`
+                  : filterType === 'categories'
+                    ? 'Sorted by category name'
+                    : filterType === 'price'
+                      ? 'Sorted by lowest price first'
+                      : filterType === 'trending'
+                        ? 'Sorted by most sales (fallback: rating)'
+                        : searchText.trim()
+                          ? `Search result for "${searchText.trim()}"`
+                          : 'Showing default order'}
+              </div>
+            </div>
+          </div>
+          {booksLoading && <p className="text-slate-300 mb-4">Loading books...</p>}
           {!booksLoading && booksError && (
             <p className="text-red-300 bg-red-950/30 border border-red-500/40 rounded-lg px-3 py-2 mb-4">
               {booksError}
@@ -336,8 +429,16 @@ function HomePage() {
           {!booksLoading && !booksError && books.length === 0 && (
             <p className="text-slate-300 mb-4">No books found.</p>
           )}
+          {!booksLoading && !booksError && books.length > 0 && visibleBooks.length === 0 && (
+            <p className="text-slate-300 mb-4">No matching books found.</p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {books.map((book, index) => (
+            {booksLoading &&
+              Array.from({ length: 8 }).map((_, index) => (
+                <BookCardSkeleton key={`book-skeleton-${index}`} />
+              ))}
+            {!booksLoading &&
+              visibleBooks.map((book, index) => (
               <div
                 key={book.id}
                 className="bg-slate-900/50 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden border border-slate-800/50 hover:border-emerald-500/50 transition-all duration-300 hover:scale-105 hover:shadow-emerald-500/10 group"
@@ -360,6 +461,9 @@ function HomePage() {
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-400 mb-3">
                     {book.author_name || 'Unknown Author'}
+                  </p>
+                  <p className="text-xs sm:text-sm text-emerald-400/90 mb-2">
+                    Category: {book.category_name || book.category || 'Unknown Category'}
                   </p>
                   <p className="text-xs sm:text-sm text-slate-300 mb-2 line-clamp-2 min-h-10">
                     {book.description || 'No description available.'}
@@ -407,7 +511,7 @@ function HomePage() {
                   </button>
                 </div>
               </div>
-            ))}
+              ))}
           </div>
         </div>
       </main>

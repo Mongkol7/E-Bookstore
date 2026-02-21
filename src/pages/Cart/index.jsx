@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { logoutAndRedirect } from '../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../utils/api';
+import Skeleton, { CartItemSkeleton } from '../../components/Skeleton';
 
 function CartPage() {
   const navigate = useNavigate();
@@ -192,7 +193,25 @@ function CartPage() {
           </div>
         </div>
 
-        {isLoading && <p className="text-slate-300">Loading cart...</p>}
+        {isLoading && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <CartItemSkeleton key={`cart-skeleton-${index}`} />
+              ))}
+            </div>
+            <div className="lg:col-span-1">
+              <div className="bg-slate-900/50 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl border border-slate-800/50 sticky top-24 space-y-4">
+                <Skeleton className="h-7 w-40" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+                <Skeleton className="h-11 w-full rounded-xl" />
+                <Skeleton className="h-5 w-2/3 mx-auto" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {!isLoading && error && (
           <div className="bg-red-950/30 border border-red-500/40 rounded-xl p-4 text-red-300 mb-6">
@@ -242,6 +261,9 @@ function CartPage() {
                         <div className="flex-1 min-w-0">
                           <h3 className="text-base sm:text-lg font-semibold text-white mb-1 truncate">{item.title}</h3>
                           <p className="text-xs sm:text-sm text-slate-400">{item.author}</p>
+                          <p className="text-xs sm:text-sm text-emerald-400/90">
+                            Category: {item.category || 'Unknown Category'}
+                          </p>
                         </div>
                         <button
                           onClick={() => removeItem(item.id)}
