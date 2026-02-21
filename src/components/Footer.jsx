@@ -28,7 +28,7 @@ function Footer() {
             </p>
             <div className="flex gap-3">
               <a
-                href="https://facebook.com"
+                href="https://www.instagram.com/sereymongkol_thoeung/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 bg-slate-800/50 hover:bg-emerald-500/20 border border-slate-700/50 hover:border-emerald-500/50 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-400 transition-all duration-200"
@@ -43,7 +43,7 @@ function Footer() {
                 </svg>
               </a>
               <a
-                href="https://twitter.com"
+                href="https://www.instagram.com/sereymongkol_thoeung/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 bg-slate-800/50 hover:bg-emerald-500/20 border border-slate-700/50 hover:border-emerald-500/50 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-400 transition-all duration-200"
@@ -58,7 +58,7 @@ function Footer() {
                 </svg>
               </a>
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/sereymongkol_thoeung/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 bg-slate-800/50 hover:bg-emerald-500/20 border border-slate-700/50 hover:border-emerald-500/50 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-400 transition-all duration-200"
@@ -73,7 +73,7 @@ function Footer() {
                 </svg>
               </a>
               <a
-                href="https://linkedin.com"
+                href="https://www.instagram.com/sereymongkol_thoeung/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 bg-slate-800/50 hover:bg-emerald-500/20 border border-slate-700/50 hover:border-emerald-500/50 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-400 transition-all duration-200"
@@ -120,7 +120,7 @@ function Footer() {
                   className="text-slate-400 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group"
                 >
                   <span className="w-1 h-1 bg-emerald-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  Categories
+                  Cart
                 </Link>
               </li>
               <li>
@@ -129,7 +129,7 @@ function Footer() {
                   className="text-slate-400 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group"
                 >
                   <span className="w-1 h-1 bg-emerald-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  Best Sellers
+                  Order History
                 </Link>
               </li>
               <li>
@@ -138,7 +138,7 @@ function Footer() {
                   className="text-slate-400 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group"
                 >
                   <span className="w-1 h-1 bg-emerald-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  New Arrivals
+                  Sign up
                 </Link>
               </li>
             </ul>
@@ -174,7 +174,7 @@ function Footer() {
                   className="text-slate-400 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group"
                 >
                   <span className="w-1 h-1 bg-emerald-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  Help Center
+                  Login
                 </Link>
               </li>
               <li>
@@ -183,16 +183,16 @@ function Footer() {
                   className="text-slate-400 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group"
                 >
                   <span className="w-1 h-1 bg-emerald-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  Shipping Info
+                  Checkout
                 </Link>
               </li>
               <li>
                 <Link
-                  to="/"
+                  to="/orders"
                   className="text-slate-400 hover:text-emerald-400 transition-colors text-sm flex items-center gap-2 group"
                 >
                   <span className="w-1 h-1 bg-emerald-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  Returns & Refunds
+                  Track Orders
                 </Link>
               </li>
             </ul>
@@ -223,11 +223,9 @@ function Footer() {
                     Email
                   </p>
                   <a
-                    href="mailto:support@ebookstore.com"
+                    href="mailto:thoeungsereymongkol@gmail.com"
                     className="text-white hover:text-emerald-400 transition-colors"
-                  >
-                    support@ebookstore.com
-                  </a>
+                  >thoeungsereymongkol@gmail.com</a>
                 </div>
               </div>
 
@@ -250,10 +248,10 @@ function Footer() {
                     Phone
                   </p>
                   <a
-                    href="tel:+1234567890"
+                    href="tel:+17420051"
                     className="text-white hover:text-emerald-400 transition-colors"
                   >
-                    +1 (234) 567-890
+                    +855 (017) 420-051
                   </a>
                 </div>
               </div>
@@ -374,5 +372,6 @@ function Footer() {
 }
 
 export default Footer;
+
 
 
