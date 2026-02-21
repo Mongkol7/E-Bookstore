@@ -334,6 +334,9 @@ function CartPage() {
                           <p className="text-xs sm:text-sm text-emerald-400/90">
                             Category: {item.category || 'Unknown Category'}
                           </p>
+                          <p className="text-xs sm:text-sm text-slate-400">
+                            Stock: {Number.isFinite(Number(item.stock)) ? Number(item.stock) : 0}
+                          </p>
                         </div>
                         <button
                           onClick={() => removeItem(item.id)}
