@@ -3,122 +3,50 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { logoutAndRedirect } from '../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../utils/api';
 
+const EMPTY_ORDER = {
+  id: '',
+  orderNumber: '',
+  orderDate: '',
+  status: 'processing',
+  deliveredDate: '',
+  items: [],
+  subtotal: 0,
+  tax: 0,
+  shipping: 0,
+  discount: 0,
+  total: 0,
+  shippingAddress: {
+    name: '',
+    street: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: '',
+    phone: '',
+    email: '',
+  },
+  paymentMethod: 'Card',
+  paymentStatus: 'paid',
+  trackingNumber: '',
+  carrier: '',
+  estimatedDelivery: '',
+  timeline: [],
+};
+
 function OrderDetailPage() {
-  // In a real app, you'd fetch this based on useParams().orderId
   const { orderId } = useParams();
   const navigate = useNavigate();
-
-  const [sampleOrder] = useState({
-    id: 1,
-    orderNumber: 'ORD-20250217-001',
-    orderDate: '2025-02-17T10:30:00',
-    status: 'delivered',
-    deliveredDate: '2025-02-20T14:45:00',
-
-    // Items
-    items: [
-      {
-        id: 1,
-        title: "Harry Potter and the Philosopher's Stone",
-        author: 'J.K. Rowling',
-        quantity: 1,
-        price: 24.99,
-        imageUrl:
-          'https://images.unsplash.com/photo-1621351183012-e2f6d86f5b9e?w=500&h=750&fit=crop&q=80',
-      },
-      {
-        id: 2,
-        title: 'Atomic Habits',
-        author: 'James Clear',
-        quantity: 2,
-        price: 27.0,
-        imageUrl:
-          'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=500&h=750&fit=crop&q=80',
-      },
-      {
-        id: 3,
-        title: 'The Alchemist',
-        author: 'Paulo Coelho',
-        quantity: 1,
-        price: 19.99,
-        imageUrl:
-          'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=500&h=750&fit=crop&q=80',
-      },
-    ],
-
-    // Pricing
-    subtotal: 98.98,
-    tax: 9.9,
-    shipping: 0.0,
-    discount: 0.0,
-    total: 108.88,
-
-    // Shipping Info
-    shippingAddress: {
-      name: 'John Doe',
-      street: '123 Main Street, Apt 4B',
-      city: 'New York',
-      state: 'NY',
-      zipCode: '10001',
-      country: 'United States',
-      phone: '+1 (555) 123-4567',
-      email: 'john.doe@example.com',
-    },
-
-    // Payment Info
-    paymentMethod: 'Visa ending in 4242',
-    paymentStatus: 'paid',
-
-    // Tracking
-    trackingNumber: '1Z999AA10123456784',
-    carrier: 'UPS',
-    estimatedDelivery: '2025-02-20',
-
-    // Timeline
-    timeline: [
-      {
-        status: 'Order Placed',
-        date: '2025-02-17T10:30:00',
-        completed: true,
-        icon: 'check',
-      },
-      {
-        status: 'Payment Confirmed',
-        date: '2025-02-17T10:31:00',
-        completed: true,
-        icon: 'check',
-      },
-      {
-        status: 'Processing',
-        date: '2025-02-17T15:20:00',
-        completed: true,
-        icon: 'check',
-      },
-      {
-        status: 'Shipped',
-        date: '2025-02-18T09:15:00',
-        completed: true,
-        icon: 'truck',
-      },
-      {
-        status: 'Out for Delivery',
-        date: '2025-02-20T08:30:00',
-        completed: true,
-        icon: 'delivery',
-      },
-      {
-        status: 'Delivered',
-        date: '2025-02-20T14:45:00',
-        completed: true,
-        icon: 'check',
-      },
-    ],
-  });
-
-  const [order, setOrder] = useState(sampleOrder);
+  const [order, setOrder] = useState(EMPTY_ORDER);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchOrder = async () => {
+      setLoading(true);
+      setNotFound(false);
+      setError('');
+
       try {
         const response = await apiFetch(`/api/orders/${orderId}`, { method: 'GET' });
         const payload = await parseJsonResponse(response);
@@ -128,21 +56,35 @@ function OrderDetailPage() {
           return;
         }
 
+        if (response.status === 404) {
+          setNotFound(true);
+          return;
+        }
+
         if (!response.ok || !payload?.order) {
+          setError(payload?.error || 'Unable to load order details');
           return;
         }
 
         setOrder({
-          ...sampleOrder,
+          ...EMPTY_ORDER,
           ...payload.order,
+          shippingAddress: {
+            ...EMPTY_ORDER.shippingAddress,
+            ...(payload.order?.shippingAddress || {}),
+          },
+          items: Array.isArray(payload.order?.items) ? payload.order.items : [],
+          timeline: Array.isArray(payload.order?.timeline) ? payload.order.timeline : [],
         });
       } catch {
-        // Keep fallback sample order on network failure.
+        setError('Unable to connect to server');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchOrder();
-  }, [orderId, sampleOrder]);
+  }, [navigate, orderId]);
 
   const getStatusColor = (status) => {
     const colors = {
@@ -153,6 +95,39 @@ function OrderDetailPage() {
     };
     return colors[status] || colors.processing;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
+        <div className="max-w-7xl mx-auto px-4 py-10 text-slate-300">Loading order details...</div>
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
+        <div className="max-w-7xl mx-auto px-4 py-10">
+          <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-6 text-red-200">
+            Order not found.
+            <Link to="/orders" className="ml-2 text-emerald-300 hover:text-emerald-200">Back to Orders</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
+        <div className="max-w-7xl mx-auto px-4 py-10">
+          <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-6 text-red-200">
+            {error}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">

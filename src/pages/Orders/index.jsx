@@ -11,6 +11,8 @@ function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [highlightLatestOrder, setHighlightLatestOrder] = useState(false);
+  const [highlightOrderId, setHighlightOrderId] = useState('');
+  const [purchaseAlert, setPurchaseAlert] = useState('');
 
   useEffect(() => {
     if (location.state?.highlightLatestOrder) {
@@ -24,6 +26,64 @@ function OrdersPage() {
 
     return undefined;
   }, [location.state]);
+
+  useEffect(() => {
+    const stateOrderId = location.state?.orderId
+      ? String(location.state.orderId)
+      : '';
+    const stateOrderNumber = location.state?.orderNumber
+      ? String(location.state.orderNumber)
+      : '';
+
+    if (stateOrderId) {
+      setHighlightOrderId(stateOrderId);
+      setPurchaseAlert(
+        stateOrderNumber
+          ? `New purchase completed: ${stateOrderNumber}`
+          : 'New purchase completed successfully.'
+      );
+      return;
+    }
+
+    try {
+      const raw = sessionStorage.getItem('latest_purchase');
+      if (!raw) {
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      const storedOrderId = parsed?.orderId ? String(parsed.orderId) : '';
+      const storedOrderNumber = parsed?.orderNumber ? String(parsed.orderNumber) : '';
+
+      if (storedOrderId) {
+        setHighlightOrderId(storedOrderId);
+        setPurchaseAlert(
+          storedOrderNumber
+            ? `New purchase completed: ${storedOrderNumber}`
+            : 'New purchase completed successfully.'
+        );
+      }
+    } catch {
+      // Ignore invalid session payload.
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    if (!purchaseAlert) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setPurchaseAlert('');
+      try {
+        sessionStorage.removeItem('latest_purchase');
+      } catch {
+        // Ignore storage errors.
+      }
+    }, 12000);
+
+    return () => clearTimeout(timer);
+  }, [purchaseAlert]);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -67,6 +127,12 @@ function OrdersPage() {
           </Link>
         </div>
 
+        {!!purchaseAlert && (
+          <div className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-emerald-200">
+            {purchaseAlert}
+          </div>
+        )}
+
         {loading && (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, index) => (
@@ -94,12 +160,14 @@ function OrdersPage() {
                 key={order.id}
                 to={`/orders/${order.id}`}
                 className={`relative block rounded-xl p-4 transition-colors ${
-                  highlightLatestOrder && orders[0]?.id === order.id
+                  (highlightOrderId && String(order.id) === highlightOrderId)
+                  || (highlightLatestOrder && orders[0]?.id === order.id)
                     ? 'bg-slate-900/60 border border-emerald-400/90 shadow-[0_0_0_2px_rgba(16,185,129,0.9),0_0_30px_rgba(16,185,129,0.75),0_0_60px_rgba(16,185,129,0.45)]'
                     : 'bg-slate-900/50 border border-slate-700/50 hover:border-emerald-500/40'
                 }`}
               >
-                {highlightLatestOrder && orders[0]?.id === order.id && (
+                {((highlightOrderId && String(order.id) === highlightOrderId)
+                  || (highlightLatestOrder && orders[0]?.id === order.id)) && (
                   <>
                     <span className="pointer-events-none absolute -inset-2 rounded-xl bg-emerald-400/25 blur-md animate-pulse"></span>
                     <span className="pointer-events-none absolute -inset-1 rounded-xl border-2 border-emerald-400/90 animate-pulse"></span>

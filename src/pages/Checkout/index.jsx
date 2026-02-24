@@ -194,6 +194,7 @@ function CheckoutPage() {
       return;
     }
 
+    let placedOrder = null;
     try {
       const response = await apiFetch('/api/cart/checkout', {
         method: 'POST',
@@ -235,6 +236,8 @@ function CheckoutPage() {
         });
         return;
       }
+
+      placedOrder = payload?.order || null;
     } catch {
       await Swal.fire({
         icon: 'error',
@@ -256,7 +259,28 @@ function CheckoutPage() {
       confirmButtonColor: '#10b981',
     });
 
-    navigate('/cart', { state: { orderPlaced: true } });
+    if (placedOrder?.id) {
+      try {
+        sessionStorage.setItem(
+          'latest_purchase',
+          JSON.stringify({
+            orderId: String(placedOrder.id),
+            orderNumber: String(placedOrder.orderNumber || ''),
+            placedAt: Date.now(),
+          })
+        );
+      } catch {
+        // Ignore storage errors.
+      }
+    }
+
+    navigate('/orders', {
+      state: {
+        highlightLatestOrder: true,
+        orderId: placedOrder?.id ? String(placedOrder.id) : undefined,
+        orderNumber: placedOrder?.orderNumber || undefined,
+      },
+    });
   };
 
   return (
