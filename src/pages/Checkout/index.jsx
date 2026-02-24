@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { logoutAndRedirect } from '../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../utils/api';
+import ProcessingOverlay from '../../components/ProcessingOverlay';
 
 const COUNTRY_OPTIONS = [
   'United States',
@@ -70,6 +71,7 @@ function CheckoutPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     // Shipping Information
     email: '',
@@ -165,18 +167,22 @@ function CheckoutPage() {
   };
 
   const handleNextStep = () => {
+    if (isProcessing) return;
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
 
   const handlePrevStep = () => {
+    if (isProcessing) return;
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
   const handleSubmit = async () => {
+    if (isProcessing) return;
+
     if (currentStep < 3) {
       setCurrentStep(3);
       return;
@@ -194,42 +200,57 @@ function CheckoutPage() {
       return;
     }
 
-    let placedOrder = null;
+    setIsProcessing(true);
     try {
-      const response = await apiFetch('/api/cart/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          shippingAddress: {
-            name: `${formData.firstName} ${formData.lastName}`.trim(),
-            street: formData.address,
-            city: formData.city,
-            state: formData.state,
-            zipCode: formData.zipCode,
-            country: formData.country,
-            phone: formData.phone,
-            email: formData.email,
+      let placedOrder = null;
+      try {
+        const response = await apiFetch('/api/cart/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          paymentMethod: formData.cardNumber
-            ? `Card ending in ${formData.cardNumber.slice(-4)}`
-            : 'Card',
-        }),
-      });
+          body: JSON.stringify({
+            shippingAddress: {
+              name: `${formData.firstName} ${formData.lastName}`.trim(),
+              street: formData.address,
+              city: formData.city,
+              state: formData.state,
+              zipCode: formData.zipCode,
+              country: formData.country,
+              phone: formData.phone,
+              email: formData.email,
+            },
+            paymentMethod: formData.cardNumber
+              ? `Card ending in ${formData.cardNumber.slice(-4)}`
+              : 'Card',
+          }),
+        });
 
-      const payload = await parseJsonResponse(response);
+        const payload = await parseJsonResponse(response);
 
-      if (response.status === 401) {
-        logoutAndRedirect(navigate);
-        return;
-      }
+        if (response.status === 401) {
+          logoutAndRedirect(navigate);
+          return;
+        }
 
-      if (!response.ok) {
+        if (!response.ok) {
+          await Swal.fire({
+            icon: 'error',
+            title: 'Checkout Failed',
+            text: payload?.error || 'Unable to place order',
+            background: '#0f172a',
+            color: '#e2e8f0',
+            confirmButtonColor: '#10b981',
+          });
+          return;
+        }
+
+        placedOrder = payload?.order || null;
+      } catch {
         await Swal.fire({
           icon: 'error',
-          title: 'Checkout Failed',
-          text: payload?.error || 'Unable to place order',
+          title: 'Network Error',
+          text: 'Unable to connect to server',
           background: '#0f172a',
           color: '#e2e8f0',
           confirmButtonColor: '#10b981',
@@ -237,56 +258,46 @@ function CheckoutPage() {
         return;
       }
 
-      placedOrder = payload?.order || null;
-    } catch {
       await Swal.fire({
-        icon: 'error',
-        title: 'Network Error',
-        text: 'Unable to connect to server',
+        icon: 'success',
+        title: 'Order placed successfully!',
+        text: 'Your order has been confirmed.',
         background: '#0f172a',
         color: '#e2e8f0',
         confirmButtonColor: '#10b981',
       });
-      return;
-    }
 
-    await Swal.fire({
-      icon: 'success',
-      title: 'Order placed successfully!',
-      text: 'Your order has been confirmed.',
-      background: '#0f172a',
-      color: '#e2e8f0',
-      confirmButtonColor: '#10b981',
-    });
+      const placedOrderRouteId = placedOrder?.id
+        ? String(placedOrder.id)
+        : placedOrder?.orderNumber
+          ? String(placedOrder.orderNumber)
+          : '';
 
-    const placedOrderRouteId = placedOrder?.id
-      ? String(placedOrder.id)
-      : placedOrder?.orderNumber
-        ? String(placedOrder.orderNumber)
-        : '';
-
-    if (placedOrderRouteId) {
-      try {
-        sessionStorage.setItem(
-          'latest_purchase',
-          JSON.stringify({
-            orderId: placedOrderRouteId,
-            orderNumber: String(placedOrder.orderNumber || ''),
-            placedAt: Date.now(),
-          })
-        );
-      } catch {
-        // Ignore storage errors.
+      if (placedOrderRouteId) {
+        try {
+          sessionStorage.setItem(
+            'latest_purchase',
+            JSON.stringify({
+              orderId: placedOrderRouteId,
+              orderNumber: String(placedOrder.orderNumber || ''),
+              placedAt: Date.now(),
+            })
+          );
+        } catch {
+          // Ignore storage errors.
+        }
       }
-    }
 
-    navigate('/orders', {
-      state: {
-        highlightLatestOrder: true,
-        orderId: placedOrderRouteId || undefined,
-        orderNumber: placedOrder?.orderNumber || undefined,
-      },
-    });
+      navigate('/orders', {
+        state: {
+          highlightLatestOrder: true,
+          orderId: placedOrderRouteId || undefined,
+          orderNumber: placedOrder?.orderNumber || undefined,
+        },
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -811,7 +822,12 @@ function CheckoutPage() {
                     <button
                       type="button"
                       onClick={handlePrevStep}
-                      className="flex-1 px-4 py-3 sm:py-3.5 bg-slate-800/50 border border-slate-700/50 text-white font-semibold rounded-lg sm:rounded-xl hover:bg-slate-700/50 transition-all duration-200 text-sm sm:text-base touch-manipulation active:scale-95"
+                      disabled={isProcessing}
+                      className={`flex-1 px-4 py-3 sm:py-3.5 bg-slate-800/50 border border-slate-700/50 text-white font-semibold rounded-lg sm:rounded-xl transition-all duration-200 text-sm sm:text-base touch-manipulation ${
+                        isProcessing
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:bg-slate-700/50 active:scale-95'
+                      }`}
                     >
                       Back
                     </button>
@@ -820,7 +836,12 @@ function CheckoutPage() {
                     <button
                       type="button"
                       onClick={handleNextStep}
-                      className="flex-1 px-4 py-3 sm:py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-900 font-semibold rounded-lg sm:rounded-xl hover:from-emerald-400 hover:to-emerald-500 transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation active:scale-95"
+                      disabled={isProcessing}
+                      className={`flex-1 px-4 py-3 sm:py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-900 font-semibold rounded-lg sm:rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation ${
+                        isProcessing
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:from-emerald-400 hover:to-emerald-500 hover:shadow-emerald-500/40 active:scale-95'
+                      }`}
                     >
                       Continue
                       <svg
@@ -841,22 +862,36 @@ function CheckoutPage() {
                     <button
                       type="button"
                       onClick={handleSubmit}
-                      className="flex-1 px-4 py-3 sm:py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-900 font-semibold rounded-lg sm:rounded-xl hover:from-emerald-400 hover:to-emerald-500 transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation active:scale-95"
+                      disabled={isProcessing}
+                      className={`flex-1 px-4 py-3 sm:py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-900 font-semibold rounded-lg sm:rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation ${
+                        isProcessing
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:from-emerald-400 hover:to-emerald-500 hover:shadow-emerald-500/40 active:scale-95'
+                      }`}
                     >
-                      Place Order
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
+                      {isProcessing ? (
+                        <>
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-900/30 border-t-slate-900" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          Place Order
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
@@ -942,6 +977,7 @@ function CheckoutPage() {
           </div>
         </form>
       </main>
+      <ProcessingOverlay show={isProcessing} />
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
