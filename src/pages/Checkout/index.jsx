@@ -259,12 +259,18 @@ function CheckoutPage() {
       confirmButtonColor: '#10b981',
     });
 
-    if (placedOrder?.id) {
+    const placedOrderRouteId = placedOrder?.id
+      ? String(placedOrder.id)
+      : placedOrder?.orderNumber
+        ? String(placedOrder.orderNumber)
+        : '';
+
+    if (placedOrderRouteId) {
       try {
         sessionStorage.setItem(
           'latest_purchase',
           JSON.stringify({
-            orderId: String(placedOrder.id),
+            orderId: placedOrderRouteId,
             orderNumber: String(placedOrder.orderNumber || ''),
             placedAt: Date.now(),
           })
@@ -277,7 +283,7 @@ function CheckoutPage() {
     navigate('/orders', {
       state: {
         highlightLatestOrder: true,
-        orderId: placedOrder?.id ? String(placedOrder.id) : undefined,
+        orderId: placedOrderRouteId || undefined,
         orderNumber: placedOrder?.orderNumber || undefined,
       },
     });

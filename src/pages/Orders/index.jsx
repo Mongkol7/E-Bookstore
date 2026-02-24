@@ -155,35 +155,57 @@ function OrdersPage() {
 
         {!loading && !error && orders.length > 0 && (
           <div className="space-y-3">
-            {orders.map((order) => (
-              <Link
-                key={order.id}
-                to={`/orders/${order.id}`}
-                className={`relative block rounded-xl p-4 transition-colors ${
-                  (highlightOrderId && String(order.id) === highlightOrderId)
-                  || (highlightLatestOrder && orders[0]?.id === order.id)
-                    ? 'bg-slate-900/60 border border-emerald-400/90 shadow-[0_0_0_2px_rgba(16,185,129,0.9),0_0_30px_rgba(16,185,129,0.75),0_0_60px_rgba(16,185,129,0.45)]'
-                    : 'bg-slate-900/50 border border-slate-700/50 hover:border-emerald-500/40'
-                }`}
-              >
-                {((highlightOrderId && String(order.id) === highlightOrderId)
-                  || (highlightLatestOrder && orders[0]?.id === order.id)) && (
-                  <>
-                    <span className="pointer-events-none absolute -inset-2 rounded-xl bg-emerald-400/25 blur-md animate-pulse"></span>
-                    <span className="pointer-events-none absolute -inset-1 rounded-xl border-2 border-emerald-400/90 animate-pulse"></span>
-                  </>
-                )}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white font-semibold">{order.orderNumber || `Order #${order.id}`}</p>
-                    <p className="text-slate-400 text-sm">
-                      {order.orderDate ? new Date(order.orderDate).toLocaleString() : '-'}
-                    </p>
+            {orders.map((order, index) => {
+              const primaryId =
+                order?.id !== null && order?.id !== undefined && String(order.id) !== ''
+                  ? String(order.id)
+                  : '';
+              const fallbackId = order?.orderNumber ? String(order.orderNumber) : '';
+              const routeId = primaryId || fallbackId;
+
+              if (!routeId) {
+                return null;
+              }
+
+              const firstOrder = orders[0] || null;
+              const firstPrimaryId =
+                firstOrder?.id !== null && firstOrder?.id !== undefined && String(firstOrder.id) !== ''
+                  ? String(firstOrder.id)
+                  : '';
+              const firstRouteId = firstPrimaryId || String(firstOrder?.orderNumber || '');
+
+              const isHighlighted =
+                (highlightOrderId && (highlightOrderId === primaryId || highlightOrderId === routeId))
+                || (highlightLatestOrder && firstRouteId === routeId);
+
+              return (
+                <Link
+                  key={`${routeId}-${index}`}
+                  to={`/orders/${encodeURIComponent(routeId)}`}
+                  className={`relative block rounded-xl p-4 transition-colors ${
+                    isHighlighted
+                      ? 'bg-slate-900/60 border border-emerald-400/90 shadow-[0_0_0_2px_rgba(16,185,129,0.9),0_0_30px_rgba(16,185,129,0.75),0_0_60px_rgba(16,185,129,0.45)]'
+                      : 'bg-slate-900/50 border border-slate-700/50 hover:border-emerald-500/40'
+                  }`}
+                >
+                  {isHighlighted && (
+                    <>
+                      <span className="pointer-events-none absolute -inset-2 rounded-xl bg-emerald-400/25 blur-md animate-pulse"></span>
+                      <span className="pointer-events-none absolute -inset-1 rounded-xl border-2 border-emerald-400/90 animate-pulse"></span>
+                    </>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white font-semibold">{order.orderNumber || `Order #${routeId}`}</p>
+                      <p className="text-slate-400 text-sm">
+                        {order.orderDate ? new Date(order.orderDate).toLocaleString() : '-'}
+                      </p>
+                    </div>
+                    <p className="text-emerald-400 font-semibold">${Number(order.total || 0).toFixed(2)}</p>
                   </div>
-                  <p className="text-emerald-400 font-semibold">${Number(order.total || 0).toFixed(2)}</p>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

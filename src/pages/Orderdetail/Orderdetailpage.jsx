@@ -48,7 +48,7 @@ function OrderDetailPage() {
       setError('');
 
       try {
-        const response = await apiFetch(`/api/orders/${orderId}`, { method: 'GET' });
+        const response = await apiFetch(`/api/orders/${encodeURIComponent(orderId)}`, { method: 'GET' });
         const payload = await parseJsonResponse(response);
 
         if (response.status === 401) {
