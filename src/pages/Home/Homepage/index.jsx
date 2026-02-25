@@ -1,18 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { clearAuthSession, logoutAndRedirect } from '../../../utils/auth';
+import { logoutAndRedirect } from '../../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../../utils/api';
 import { BookCardSkeleton } from '../../../components/Skeleton';
+import StoreNavbar from '../../../components/StoreNavbar';
 
 function HomePage() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState({
-    name: 'Unknown User',
-    role: 'Guest',
-  });
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [books, setBooks] = useState([]);
   const [booksLoading, setBooksLoading] = useState(true);
   const [booksError, setBooksError] = useState('');
@@ -20,68 +15,6 @@ function HomePage() {
   const [filterType, setFilterType] = useState('none');
   const [searchText, setSearchText] = useState('');
   const [searchScope, setSearchScope] = useState('all');
-
-  useEffect(() => {
-    const fallbackFromLocalStorage = () => {
-      try {
-        const raw = localStorage.getItem('auth_user');
-        if (!raw) {
-          return;
-        }
-        const parsed = JSON.parse(raw);
-        const fallbackName =
-          parsed?.user?.first_name && parsed?.user?.last_name
-            ? `${parsed.user.first_name} ${parsed.user.last_name}`
-            : parsed?.customer?.first_name && parsed?.customer?.last_name
-              ? `${parsed.customer.first_name} ${parsed.customer.last_name}`
-            : parsed?.email || 'Unknown User';
-        const fallbackRole =
-          typeof parsed?.role === 'string' && parsed.role.trim() !== ''
-            ? `${parsed.role.charAt(0).toUpperCase()}${parsed.role.slice(1)}`
-            : 'Guest';
-
-        setProfile({
-          name: fallbackName,
-          role: fallbackRole,
-        });
-      } catch {
-        setProfile({
-          name: 'Unknown User',
-          role: 'Guest',
-        });
-      }
-    };
-
-    const fetchProfile = async () => {
-      try {
-        const response = await apiFetch('/api/auth/profile', { method: 'GET' });
-
-        if (response.status === 401) {
-          clearAuthSession();
-          setProfile({
-            name: 'Unknown User',
-            role: 'Guest',
-          });
-          return;
-        }
-
-        if (!response.ok) {
-          fallbackFromLocalStorage();
-          return;
-        }
-
-        const data = await response.json();
-        setProfile({
-          name: data?.user?.name || 'Unknown User',
-          role: data?.user?.role || 'Guest',
-        });
-      } catch {
-        fallbackFromLocalStorage();
-      }
-    };
-
-    fetchProfile();
-  }, []);
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -111,24 +44,6 @@ function HomePage() {
 
     fetchBooks();
   }, []);
-
-  const handleLogout = async () => {
-    try {
-      await apiFetch('/api/logout', {
-        method: 'POST',
-      });
-    } catch {
-      // No-op: we still clear local state for UX consistency.
-    } finally {
-      clearAuthSession();
-      setProfile({
-        name: 'Unknown User',
-        role: 'Guest',
-      });
-      setIsProfileMenuOpen(false);
-      setShowLogoutModal(false);
-    }
-  };
 
   const handleAddToCart = async (bookId) => {
     setAddingBookIds((prev) => ({ ...prev, [bookId]: true }));
@@ -193,13 +108,6 @@ function HomePage() {
     } finally {
       setAddingBookIds((prev) => ({ ...prev, [bookId]: false }));
     }
-  };
-
-  const getProfileInitial = () => {
-    if (!profile.name || profile.name === 'Unknown User') {
-      return '?';
-    }
-    return profile.name.trim().charAt(0).toUpperCase();
   };
 
   const highlightMatch = (text, field) => {
@@ -306,121 +214,7 @@ function HomePage() {
         <div className="absolute bottom-1/4 right-1/4 w-1/3 h-1/3 bg-teal-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      <header className="bg-slate-900/50 backdrop-blur-xl shadow-2xl border-b border-slate-800/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-y-2">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800/50 backdrop-blur-sm rounded-lg sm:rounded-xl flex items-center justify-center border border-slate-700/50 shadow-lg">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-sm sm:rounded-md rotate-45 shadow-lg shadow-emerald-500/50"></div>
-            </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
-              E-Bookstore
-            </h1>
-          </div>
-          <div className="w-full sm:w-auto flex items-center justify-end gap-2 sm:gap-3 sm:ml-4">
-            <Link
-              to="/cart"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700/60 bg-slate-800/40 text-slate-200 hover:border-emerald-500/40 hover:text-white transition-colors text-sm"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 3h2l.4 2m0 0L7 13h10l2-8H5.4zM7 13l-1 5h12M9 20a1 1 0 100 2 1 1 0 000-2zm8 0a1 1 0 100 2 1 1 0 000-2z"
-                />
-              </svg>
-              Cart
-            </Link>
-
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                className="w-full bg-slate-800/40 border border-slate-700/50 rounded-lg px-3 py-2 text-left hover:border-emerald-500/40 transition-colors flex items-center gap-3"
-              >
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-900 font-bold text-sm flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                  {getProfileInitial()}
-                </div>
-                <div>
-                  <p className="text-xs sm:text-sm text-slate-200 font-semibold line-clamp-1">
-                    {profile.name}
-                  </p>
-                  <p className="text-[11px] sm:text-xs text-emerald-400">
-                    Role: {profile.role}
-                  </p>
-                </div>
-              </button>
-
-              {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-full sm:w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50 p-2">
-                  <Link
-                    to="/login"
-                    onClick={() => setIsProfileMenuOpen(false)}
-                    className="block w-full text-left text-sm text-slate-200 hover:bg-slate-800 rounded-md px-3 py-2 transition-colors"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    to="/signup"
-                    onClick={() => setIsProfileMenuOpen(false)}
-                    className="block w-full text-left text-sm text-slate-200 hover:bg-slate-800 rounded-md px-3 py-2 transition-colors"
-                  >
-                    Signup
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      setShowLogoutModal(true);
-                    }}
-                    className="w-full text-left text-sm text-red-300 hover:bg-red-950/40 rounded-md px-3 py-2 transition-colors"
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {showLogoutModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
-          <div
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
-            onClick={() => setShowLogoutModal(false)}
-          ></div>
-          <div className="relative w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl p-5 shadow-2xl">
-            <h3 className="text-lg font-semibold text-white mb-2">
-              Confirm Logout
-            </h3>
-            <p className="text-sm text-slate-300 mb-5">
-              Are you sure you want to logout from this account?
-            </p>
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowLogoutModal(false)}
-                className="px-3 py-2 rounded-lg border border-slate-600 text-slate-200 hover:bg-slate-800 transition-colors text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="px-3 py-2 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-400 hover:to-red-500 transition-all text-sm font-medium"
-              >
-                Yes, Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StoreNavbar />
 
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8 relative">
         <div className="py-4 sm:py-6">
@@ -519,7 +313,7 @@ function HomePage() {
                   className="bg-slate-900/50 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden border border-slate-800/50 hover:border-emerald-500/50 transition-all duration-300 hover:scale-105 hover:shadow-emerald-500/10 group"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="relative overflow-hidden">
+                  <Link to={`/product/${book.id}`} className="block relative overflow-hidden">
                     <img
                       src={
                         book.image ||
@@ -529,11 +323,14 @@ function HomePage() {
                       className="w-full h-40 sm:h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60"></div>
-                  </div>
+                  </Link>
                   <div className="p-4 sm:p-5">
-                    <h3 className="text-base sm:text-lg font-semibold text-white mb-1 line-clamp-1">
+                    <Link
+                      to={`/product/${book.id}`}
+                      className="text-base sm:text-lg font-semibold text-white mb-1 line-clamp-1 hover:text-emerald-300 transition-colors block"
+                    >
                       {highlightMatch(book.title, 'name')}
-                    </h3>
+                    </Link>
                     <p className="text-xs sm:text-sm text-slate-400 mb-3">
                       {highlightMatch(
                         book.author_name || 'Unknown Author',
@@ -606,6 +403,12 @@ function HomePage() {
                       </svg>
                       {addingBookIds[book.id] ? 'Adding...' : 'Add to Cart'}
                     </button>
+                    <Link
+                      to={`/product/${book.id}`}
+                      className="mt-2 block w-full text-center text-sm text-slate-300 hover:text-emerald-300 transition-colors"
+                    >
+                      View details
+                    </Link>
                   </div>
                 </div>
               ))}

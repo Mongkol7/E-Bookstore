@@ -13,6 +13,7 @@ function CartPage() {
   const [updatingIds, setUpdatingIds] = useState({});
   const [quantityInputs, setQuantityInputs] = useState({});
   const [quantityErrors, setQuantityErrors] = useState({});
+  const [serverQuantities, setServerQuantities] = useState({});
   const [showOrderHistoryHighlight, setShowOrderHistoryHighlight] = useState(false);
   const [isProceedingCheckout, setIsProceedingCheckout] = useState(false);
 
@@ -49,10 +50,13 @@ function CartPage() {
           return;
         }
 
-        setCartItems(Array.isArray(payload?.items) ? payload.items : []);
+        const nextItems = Array.isArray(payload?.items) ? payload.items : [];
+        setCartItems(nextItems);
+        setServerQuantities(toServerQuantitiesMap(nextItems));
       } catch {
         setError('Unable to connect to server');
         setCartItems([]);
+        setServerQuantities({});
       } finally {
         setIsLoading(false);
       }
@@ -78,6 +82,13 @@ function CartPage() {
   const shipping = subtotal > 50 ? 0 : 5.99;
   const total = subtotal + tax + shipping;
   const isAnyItemUpdating = Object.values(updatingIds).some(Boolean);
+  const toServerQuantitiesMap = (items) =>
+    Object.fromEntries(
+      (Array.isArray(items) ? items : []).map((item) => [
+        item.id,
+        Number(item.quantity ?? 1),
+      ])
+    );
 
   const updateQuantity = async (id, newQuantity) => {
     if (newQuantity < 1) return;
@@ -98,7 +109,7 @@ function CartPage() {
 
       if (response.status === 401) {
         logoutAndRedirect(navigate);
-        return;
+        return null;
       }
 
       if (!response.ok) {
@@ -108,6 +119,7 @@ function CartPage() {
 
       const nextItems = Array.isArray(payload?.items) ? payload.items : [];
       setCartItems(nextItems);
+      setServerQuantities(toServerQuantitiesMap(nextItems));
       return nextItems;
     } catch {
       setError('Unable to connect to server');
@@ -133,7 +145,7 @@ function CartPage() {
 
       if (response.status === 401) {
         logoutAndRedirect(navigate);
-        return;
+        return null;
       }
 
       if (!response.ok) {
@@ -141,7 +153,9 @@ function CartPage() {
         return;
       }
 
-      setCartItems(Array.isArray(payload?.items) ? payload.items : []);
+      const nextItems = Array.isArray(payload?.items) ? payload.items : [];
+      setCartItems(nextItems);
+      setServerQuantities(toServerQuantitiesMap(nextItems));
     } catch {
       setError('Unable to connect to server');
     } finally {
@@ -175,7 +189,16 @@ function CartPage() {
     setQuantityErrors((prev) => ({ ...prev, [item.id]: validationMessage }));
   };
 
-  const commitQuantityInput = async (item) => {
+  const applyLocalQuantity = (id, nextQuantity) => {
+    setCartItems((prev) =>
+      prev.map((entry) =>
+        entry.id === id ? { ...entry, quantity: nextQuantity } : entry
+      )
+    );
+    setQuantityInputs((prev) => ({ ...prev, [id]: String(nextQuantity) }));
+  };
+
+  const commitQuantityInput = (item) => {
     const rawValue = quantityInputs[item.id] ?? String(item.quantity ?? 1);
 
     const validationMessage = validateQuantityInput(item, rawValue);
@@ -192,11 +215,11 @@ function CartPage() {
 
     const parsedQuantity = Number.parseInt(rawValue, 10);
     if (parsedQuantity !== item.quantity) {
-      await updateQuantity(item.id, parsedQuantity);
+      applyLocalQuantity(item.id, parsedQuantity);
     }
   };
 
-  const updateQuantityWithValidation = async (item, nextQuantity) => {
+  const updateQuantityWithValidation = (item, nextQuantity) => {
     const validationMessage = validateQuantityInput(item, String(nextQuantity));
     if (validationMessage) {
       setQuantityErrors((prev) => ({ ...prev, [item.id]: validationMessage }));
@@ -204,8 +227,7 @@ function CartPage() {
     }
 
     setQuantityErrors((prev) => ({ ...prev, [item.id]: '' }));
-    setQuantityInputs((prev) => ({ ...prev, [item.id]: String(nextQuantity) }));
-    await updateQuantity(item.id, nextQuantity);
+    applyLocalQuantity(item.id, nextQuantity);
   };
 
   const syncQuantityInputsBeforeCheckout = async () => {
@@ -235,7 +257,8 @@ function CartPage() {
     for (const item of cartItems) {
       const rawValue = quantityInputs[item.id] ?? String(item.quantity ?? 1);
       const parsedQuantity = Number.parseInt(rawValue, 10);
-      if (parsedQuantity !== item.quantity) {
+      const persistedQuantity = Number(serverQuantities[item.id] ?? item.quantity ?? 1);
+      if (parsedQuantity !== persistedQuantity) {
         const updatedItems = await updateQuantity(item.id, parsedQuantity);
         if (!Array.isArray(updatedItems)) {
           return null;
@@ -433,7 +456,7 @@ function CartPage() {
                             )}
                             <button
                               onClick={() => {
-                                void updateQuantityWithValidation(
+                                updateQuantityWithValidation(
                                   item,
                                   item.quantity - 1,
                                 );
@@ -453,7 +476,7 @@ function CartPage() {
                               value={quantityInputs[item.id] ?? String(item.quantity ?? 1)}
                               onChange={(event) => handleQuantityInputChange(item, event.target.value)}
                               onBlur={() => {
-                                void commitQuantityInput(item);
+                                commitQuantityInput(item);
                               }}
                               onKeyDown={(event) => {
                                 if (event.key === 'Enter') {
@@ -466,7 +489,7 @@ function CartPage() {
                             />
                             <button
                               onClick={() => {
-                                void updateQuantityWithValidation(
+                                updateQuantityWithValidation(
                                   item,
                                   item.quantity + 1,
                                 );
