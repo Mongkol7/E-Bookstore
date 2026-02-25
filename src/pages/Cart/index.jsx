@@ -14,6 +14,7 @@ function CartPage() {
   const [quantityInputs, setQuantityInputs] = useState({});
   const [quantityErrors, setQuantityErrors] = useState({});
   const [showOrderHistoryHighlight, setShowOrderHistoryHighlight] = useState(false);
+  const [isProceedingCheckout, setIsProceedingCheckout] = useState(false);
 
   useEffect(() => {
     if (location.state?.orderPlaced) {
@@ -76,6 +77,7 @@ function CartPage() {
   const tax = subtotal * 0.1;
   const shipping = subtotal > 50 ? 0 : 5.99;
   const total = subtotal + tax + shipping;
+  const isAnyItemUpdating = Object.values(updatingIds).some(Boolean);
 
   const updateQuantity = async (id, newQuantity) => {
     if (newQuantity < 1) return;
@@ -101,12 +103,15 @@ function CartPage() {
 
       if (!response.ok) {
         setError(payload?.error || 'Unable to update quantity');
-        return;
+        return null;
       }
 
-      setCartItems(Array.isArray(payload?.items) ? payload.items : []);
+      const nextItems = Array.isArray(payload?.items) ? payload.items : [];
+      setCartItems(nextItems);
+      return nextItems;
     } catch {
       setError('Unable to connect to server');
+      return null;
     } finally {
       setUpdatingIds((prev) => ({ ...prev, [id]: false }));
     }
@@ -201,6 +206,64 @@ function CartPage() {
     setQuantityErrors((prev) => ({ ...prev, [item.id]: '' }));
     setQuantityInputs((prev) => ({ ...prev, [item.id]: String(nextQuantity) }));
     await updateQuantity(item.id, nextQuantity);
+  };
+
+  const syncQuantityInputsBeforeCheckout = async () => {
+    let hasValidationError = false;
+    const nextErrors = {};
+
+    cartItems.forEach((item) => {
+      const rawValue = quantityInputs[item.id] ?? String(item.quantity ?? 1);
+      const validationMessage =
+        rawValue === ''
+          ? 'Quantity is required'
+          : validateQuantityInput(item, rawValue);
+      nextErrors[item.id] = validationMessage;
+      if (validationMessage) {
+        hasValidationError = true;
+      }
+    });
+
+    setQuantityErrors((prev) => ({ ...prev, ...nextErrors }));
+
+    if (hasValidationError) {
+      setError('Please fix quantity errors before checkout.');
+      return null;
+    }
+
+    let latestItems = cartItems;
+    for (const item of cartItems) {
+      const rawValue = quantityInputs[item.id] ?? String(item.quantity ?? 1);
+      const parsedQuantity = Number.parseInt(rawValue, 10);
+      if (parsedQuantity !== item.quantity) {
+        const updatedItems = await updateQuantity(item.id, parsedQuantity);
+        if (!Array.isArray(updatedItems)) {
+          return null;
+        }
+        latestItems = updatedItems;
+      }
+    }
+
+    return latestItems;
+  };
+
+  const handleProceedToCheckout = async () => {
+    if (isProceedingCheckout || isAnyItemUpdating) {
+      return;
+    }
+
+    setError('');
+    setIsProceedingCheckout(true);
+    try {
+      const syncedItems = await syncQuantityInputsBeforeCheckout();
+      if (!Array.isArray(syncedItems)) {
+        return;
+      }
+
+      navigate('/checkout', { state: { items: syncedItems } });
+    } finally {
+      setIsProceedingCheckout(false);
+    }
   };
 
   return (
@@ -467,13 +530,32 @@ function CartPage() {
                     </div>
                   </div>
                 </div>
-                <Link
-                  to="/checkout"
-                  state={{ items: cartItems }}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-900 py-3 sm:py-4 px-4 rounded-xl hover:from-emerald-400 hover:to-emerald-500 transition-all duration-200 font-semibold shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 flex items-center justify-center gap-2 mb-3 sm:mb-4 text-sm sm:text-base touch-manipulation active:scale-95"
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleProceedToCheckout();
+                  }}
+                  disabled={isProceedingCheckout || isAnyItemUpdating}
+                  className={`w-full py-3 sm:py-4 px-4 rounded-xl transition-all duration-200 font-semibold shadow-lg flex items-center justify-center gap-2 mb-3 sm:mb-4 text-sm sm:text-base touch-manipulation ${
+                    isProceedingCheckout || isAnyItemUpdating
+                      ? 'bg-emerald-600/70 text-slate-900/80 cursor-not-allowed shadow-emerald-700/20'
+                      : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-slate-900 shadow-emerald-500/25 hover:from-emerald-400 hover:to-emerald-500 hover:shadow-emerald-500/40 active:scale-95'
+                  }`}
                 >
-                  Proceed to Checkout
-                </Link>
+                  {isProceedingCheckout ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900/30 border-t-slate-900" />
+                      Preparing Checkout...
+                    </>
+                  ) : isAnyItemUpdating ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900/30 border-t-slate-900" />
+                      Updating Cart...
+                    </>
+                  ) : (
+                    'Proceed to Checkout'
+                  )}
+                </button>
                 <Link
                   to="/"
                   className="block w-full text-center text-slate-400 hover:text-emerald-400 transition-colors text-sm sm:text-base"
