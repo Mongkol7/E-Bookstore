@@ -354,12 +354,20 @@ function CartPage() {
                           <div className="flex items-center gap-2 sm:gap-3">
                             <span className="text-xs sm:text-sm text-slate-400">Qty:</span>
                             <div
-                              className={`flex items-center bg-slate-800/50 rounded-lg border ${
+                              className={`relative flex items-center bg-slate-800/50 rounded-lg border ${
                                 quantityErrors[item.id]
                                   ? 'border-red-500/60'
                                   : 'border-slate-700/50'
                               }`}
                             >
+                            {!!updatingIds[item.id] && (
+                              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-900/70">
+                                <div className="flex items-center gap-2 text-xs text-emerald-300">
+                                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-300/30 border-t-emerald-300" />
+                                  Updating...
+                                </div>
+                              </div>
+                            )}
                             <button
                               onClick={() => {
                                 void updateQuantityWithValidation(
