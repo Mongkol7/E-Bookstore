@@ -37,7 +37,7 @@ function getFallbackProfileFromStorage() {
   }
 }
 
-function StoreNavbar() {
+function StoreNavbar({ backTo = '', backLabel = '' }) {
   const navigate = useNavigate();
   const [profile, setProfile] = useState({
     name: 'Unknown User',
@@ -85,6 +85,12 @@ function StoreNavbar() {
 
     return profile.name.trim().charAt(0).toUpperCase();
   }, [profile.name]);
+  const isAdmin = String(profile.role || '').toLowerCase() === 'admin';
+  const hasBackButton =
+    typeof backTo === 'string' &&
+    backTo.trim() !== '' &&
+    typeof backLabel === 'string' &&
+    backLabel.trim() !== '';
 
   const handleLogout = async () => {
     try {
@@ -104,20 +110,64 @@ function StoreNavbar() {
   return (
     <>
       <header className="bg-slate-900/50 backdrop-blur-xl shadow-2xl border-b border-slate-800/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-y-2">
-          <Link to="/" className="flex items-center gap-2 sm:gap-3">
+        <div className="max-w-7xl mx-auto py-3 sm:py-4 md:py-5 px-3 sm:px-4 md:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-2 sm:gap-3">
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800/50 backdrop-blur-sm rounded-lg sm:rounded-xl flex items-center justify-center border border-slate-700/50 shadow-lg">
               <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-sm sm:rounded-md rotate-45 shadow-lg shadow-emerald-500/50"></div>
             </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white tracking-tight truncate">
               E-Bookstore
             </h1>
           </Link>
 
-          <div className="w-full sm:w-auto flex items-center justify-end gap-2 sm:gap-3 sm:ml-4">
+          <div className="w-full md:w-auto flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 md:gap-3 md:ml-4">
+            {hasBackButton && (
+              <Link
+                to={backTo}
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-slate-700/60 bg-slate-800/40 text-slate-200 hover:border-emerald-500/40 hover:text-white transition-colors text-xs sm:text-sm"
+                aria-label={backLabel}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                <span className="sm:hidden">Back</span>
+                <span className="hidden sm:inline max-w-[10rem] truncate">
+                  {backLabel}
+                </span>
+              </Link>
+            )}
+            {isAdmin && (
+              <>
+                <Link
+                  to="/"
+                  className="inline-flex items-center px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-slate-700/60 bg-slate-800/40 text-slate-200 hover:border-emerald-500/40 hover:text-white transition-colors text-xs sm:text-sm"
+                >
+                  <span className="sm:hidden">Home</span>
+                  <span className="hidden sm:inline">Homepage</span>
+                </Link>
+                <Link
+                  to="/admin/dashboard"
+                  className="inline-flex items-center px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 transition-colors text-xs sm:text-sm"
+                >
+                  <span className="sm:hidden">Dash</span>
+                  <span className="hidden sm:inline">Dashboard</span>
+                </Link>
+              </>
+            )}
             <Link
               to="/cart"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700/60 bg-slate-800/40 text-slate-200 hover:border-emerald-500/40 hover:text-white transition-colors text-sm"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-slate-700/60 bg-slate-800/40 text-slate-200 hover:border-emerald-500/40 hover:text-white transition-colors text-xs sm:text-sm"
+              aria-label="Cart"
             >
               <svg
                 className="w-4 h-4"
@@ -132,19 +182,19 @@ function StoreNavbar() {
                   d="M3 3h2l.4 2m0 0L7 13h10l2-8H5.4zM7 13l-1 5h12M9 20a1 1 0 100 2 1 1 0 000-2zm8 0a1 1 0 100 2 1 1 0 000-2z"
                 />
               </svg>
-              Cart
+              <span className="hidden sm:inline">Cart</span>
             </Link>
 
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                className="w-full bg-slate-800/40 border border-slate-700/50 rounded-lg px-3 py-2 text-left hover:border-emerald-500/40 transition-colors flex items-center gap-3"
+                className="bg-slate-800/40 border border-slate-700/50 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-left hover:border-emerald-500/40 transition-colors flex items-center gap-2 sm:gap-3"
               >
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-900 font-bold text-sm flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center shadow-lg shadow-emerald-500/25">
                   {profileInitial}
                 </div>
-                <div>
+                <div className="hidden md:block">
                   <p className="text-xs sm:text-sm text-slate-200 font-semibold line-clamp-1">
                     {profile.name}
                   </p>
@@ -155,7 +205,7 @@ function StoreNavbar() {
               </button>
 
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-full sm:w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50 p-2">
+                <div className="absolute right-0 mt-2 w-48 sm:w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50 p-2">
                   <Link
                     to="/login"
                     onClick={() => setIsProfileMenuOpen(false)}

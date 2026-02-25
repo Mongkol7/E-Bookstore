@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { logoutAndRedirect } from '../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../utils/api';
 import Skeleton, { CartItemSkeleton } from '../../components/Skeleton';
+import StoreNavbar from '../../components/StoreNavbar';
 
 function CartPage() {
   const navigate = useNavigate();
@@ -296,26 +297,7 @@ function CartPage() {
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-teal-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      <header className="bg-slate-900/50 backdrop-blur-xl shadow-2xl border-b border-slate-800/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8 flex justify-between items-center">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link to="/" className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800/50 backdrop-blur-sm rounded-lg sm:rounded-xl flex items-center justify-center border border-slate-700/50 shadow-lg">
-                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-sm sm:rounded-md rotate-45 shadow-lg shadow-emerald-500/50"></div>
-              </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
-                E-Bookstore
-              </h1>
-            </Link>
-          </div>
-          <Link
-            to="/"
-            className="text-slate-300 hover:text-emerald-400 transition-colors font-medium px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-800/50 text-sm sm:text-base"
-          >
-            Continue Shopping
-          </Link>
-        </div>
-      </header>
+      <StoreNavbar backTo="/" backLabel="Continue Shopping" />
 
       <main className="max-w-7xl mx-auto py-6 sm:py-12 px-3 sm:px-4 md:px-6 lg:px-8 relative">
         <div className="mb-6 sm:mb-8">

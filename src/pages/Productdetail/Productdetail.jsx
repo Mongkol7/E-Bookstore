@@ -200,7 +200,7 @@ function ProductDetailPage() {
         {isLoading && (
           <div className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
-              <div className="w-full max-w-sm lg:max-w-md mx-auto bg-slate-900/50 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-800/50">
+              <div className="w-full max-w-[15rem] sm:max-w-sm lg:max-w-md mx-auto bg-slate-900/50 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-2.5 sm:p-4 border border-slate-800/50">
                 <Skeleton className="aspect-[3/4] w-full rounded-xl" />
               </div>
               <div className="space-y-5">
@@ -251,7 +251,7 @@ function ProductDetailPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-7 lg:gap-10 mb-12">
-              <div className="w-full max-w-sm lg:max-w-md mx-auto bg-slate-900/50 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-slate-800/50">
+              <div className="w-full max-w-[15rem] sm:max-w-sm lg:max-w-md mx-auto bg-slate-900/50 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-2.5 sm:p-4 border border-slate-800/50">
                 <div className="relative aspect-[3/4] rounded-xl overflow-hidden">
                   <img
                     src={book.image || FALLBACK_IMAGE}
@@ -315,7 +315,7 @@ function ProductDetailPage() {
                       void handleAddToCart();
                     }}
                     disabled={stock < 1 || isAddingToCart}
-                    className="w-full px-5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-900 font-bold rounded-lg transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 flex items-center justify-center gap-2 text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-900 font-bold rounded-lg transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 flex items-center justify-center gap-2 text-xs sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {isAddingToCart ? 'Adding...' : stock < 1 ? 'Out of Stock' : 'Add to Cart'}
                   </button>

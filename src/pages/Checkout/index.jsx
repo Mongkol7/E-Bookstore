@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import { logoutAndRedirect } from '../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../utils/api';
 import ProcessingOverlay from '../../components/ProcessingOverlay';
+import StoreNavbar from '../../components/StoreNavbar';
 
 const COUNTRY_OPTIONS = [
   'United States',
@@ -308,33 +309,7 @@ function CheckoutPage() {
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-teal-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      {/* Header */}
-      <header className="bg-slate-900/50 backdrop-blur-xl shadow-2xl border-b border-slate-800/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8 flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800/50 backdrop-blur-sm rounded-lg sm:rounded-xl flex items-center justify-center border border-slate-700/50 shadow-lg">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-sm sm:rounded-md rotate-45 shadow-lg shadow-emerald-500/50"></div>
-            </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
-              E-Bookstore
-            </h1>
-          </Link>
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
-            <svg
-              className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span className="hidden sm:inline">Secure Checkout</span>
-          </div>
-        </div>
-      </header>
+      <StoreNavbar backTo="/cart" backLabel="Back to Cart" />
 
       <main className="max-w-7xl mx-auto py-6 sm:py-12 px-3 sm:px-4 md:px-6 lg:px-8 relative">
         {checkoutItems.length === 0 && (

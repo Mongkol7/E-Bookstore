@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { logoutAndRedirect } from '../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../utils/api';
 import { OrderRowSkeleton } from '../../components/Skeleton';
+import StoreNavbar from '../../components/StoreNavbar';
 
 function OrdersPage() {
   const navigate = useNavigate();
@@ -119,12 +120,10 @@ function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
+      <StoreNavbar backTo="/cart" backLabel="Back to Cart" />
       <div className="max-w-7xl mx-auto py-8 px-4">
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-white">Order History</h1>
-          <Link to="/cart" className="text-emerald-400 hover:text-emerald-300 text-sm sm:text-base">
-            Back to Cart
-          </Link>
         </div>
 
         {!!purchaseAlert && (

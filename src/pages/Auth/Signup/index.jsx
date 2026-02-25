@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { buildApiUrl, parseJsonResponse } from '../../../utils/api';
+import StoreNavbar from '../../../components/StoreNavbar';
 
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -57,13 +58,16 @@ function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 flex items-center justify-center py-6 sm:py-12 px-3 sm:px-4 md:px-6 lg:px-8 font-['Outfit',sans-serif]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-1/3 h-1/3 bg-emerald-500/5 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-1/3 h-1/3 bg-teal-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
+      <StoreNavbar backTo="/" backLabel="Back to Store" />
+
+      <main className="relative min-h-[calc(100vh-96px)] flex items-center justify-center py-6 sm:py-12 px-3 sm:px-4 md:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-4 sm:space-y-8 relative mx-auto">
         {/* Logo */}
         <div className="flex justify-center mb-4 sm:mb-8 animate-fadeIn">
@@ -310,6 +314,7 @@ function Signup() {
           </form>
         </div>
       </div>
+      </main>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');

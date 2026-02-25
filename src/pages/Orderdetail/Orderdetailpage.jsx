@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { logoutAndRedirect } from '../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../utils/api';
+import StoreNavbar from '../../components/StoreNavbar';
 
 const EMPTY_ORDER = {
   id: '',
@@ -99,6 +100,7 @@ function OrderDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
+        <StoreNavbar backTo="/orders" backLabel="Back to Orders" />
         <div className="max-w-7xl mx-auto px-4 py-10 text-slate-300">Loading order details...</div>
       </div>
     );
@@ -107,6 +109,7 @@ function OrderDetailPage() {
   if (notFound) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
+        <StoreNavbar backTo="/orders" backLabel="Back to Orders" />
         <div className="max-w-7xl mx-auto px-4 py-10">
           <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-6 text-red-200">
             Order not found.
@@ -120,6 +123,7 @@ function OrderDetailPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
+        <StoreNavbar backTo="/orders" backLabel="Back to Orders" />
         <div className="max-w-7xl mx-auto px-4 py-10">
           <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-6 text-red-200">
             {error}
@@ -137,38 +141,7 @@ function OrderDetailPage() {
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-teal-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      {/* Header */}
-      <header className="bg-slate-900/50 backdrop-blur-xl shadow-2xl border-b border-slate-800/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8 flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800/50 backdrop-blur-sm rounded-lg sm:rounded-xl flex items-center justify-center border border-slate-700/50 shadow-lg">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-sm sm:rounded-md rotate-45 shadow-lg shadow-emerald-500/50"></div>
-            </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">
-              E-Bookstore
-            </h1>
-          </Link>
-          <Link
-            to="/orders"
-            className="text-slate-300 hover:text-emerald-400 transition-colors font-medium px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-800/50 text-sm sm:text-base flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            All Orders
-          </Link>
-        </div>
-      </header>
+      <StoreNavbar backTo="/orders" backLabel="Back to Orders" />
 
       <main className="max-w-7xl mx-auto py-6 sm:py-12 px-3 sm:px-4 md:px-6 lg:px-8 relative">
         {/* Order Header */}

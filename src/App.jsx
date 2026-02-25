@@ -7,6 +7,8 @@ import CheckoutPage from './pages/Checkout';
 import OrderDetailPage from './pages/Orderdetail/Orderdetailpage';
 import OrdersPage from './pages/Orders';
 import ProductDetailPage from './pages/Productdetail/Productdetail';
+import AdminDashboard from './pages/Dashboard';
+import AdminRoute from './components/AdminRoute';
 import Footer from './components/Footer';
 import './App.css';
 
@@ -23,6 +25,22 @@ function App() {
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/orders/:orderId" element={<OrderDetailPage />} />
             <Route path="/product/:bookId" element={<ProductDetailPage />} />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
             <Route path="/" element={<Homepage />} />
           </Routes>
         </div>
