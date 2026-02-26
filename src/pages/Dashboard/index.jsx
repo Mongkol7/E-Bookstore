@@ -388,7 +388,15 @@ function AdminDashboard() {
 
             <section className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
               <div className="xl:col-span-2 rounded-xl border border-slate-800/60 bg-slate-900/40 p-4">
-                <h2 className="text-lg font-semibold text-white mb-4">All Recent Orders</h2>
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold text-white">All Recent Orders</h2>
+                  <Link
+                    to="/orders?scope=all"
+                    className="inline-flex items-center rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-emerald-500/40 hover:text-white transition-colors"
+                  >
+                    Show All Orders
+                  </Link>
+                </div>
                 {recentOrders.length === 0 ? (
                   <p className="text-sm text-slate-400">No orders available.</p>
                 ) : (
