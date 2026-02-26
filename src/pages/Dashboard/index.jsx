@@ -56,6 +56,26 @@ function numberValue(input) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function getOrderOwnerLabel(order) {
+  const owner = order?.owner;
+  if (!owner || typeof owner !== 'object') {
+    return 'Unknown user';
+  }
+
+  const ownerType = String(owner.userType || '').toLowerCase();
+  const ownerName = String(owner.name || '').trim();
+
+  if (ownerType === 'customer') {
+    return ownerName ? `Customer: ${ownerName}` : 'Customer';
+  }
+
+  if (ownerType === 'admin') {
+    return ownerName ? `Admin: ${ownerName}` : 'Admin';
+  }
+
+  return ownerName || 'Unknown user';
+}
+
 function AdminDashboard() {
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
@@ -63,7 +83,8 @@ function AdminDashboard() {
   const [error, setError] = useState('');
   const [profileName, setProfileName] = useState('Admin');
   const [books, setBooks] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const [adminOrders, setAdminOrders] = useState([]);
+  const [allRecentOrders, setAllRecentOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
 
   useEffect(() => {
@@ -74,19 +95,33 @@ function AdminDashboard() {
       setError('');
 
       try {
-        const [profileResponse, booksResponse, ordersResponse, customersResponse] =
+        const [
+          profileResponse,
+          booksResponse,
+          ordersResponse,
+          dashboardOrdersResponse,
+          customersResponse,
+        ] =
           await Promise.all([
             apiFetch('/api/auth/profile', { method: 'GET' }),
             apiFetch('/api/books', { method: 'GET' }),
             apiFetch('/api/orders', { method: 'GET' }),
+            apiFetch('/api/admin/dashboard/orders', { method: 'GET' }),
             apiFetch('/api/customers', { method: 'GET' }),
           ]);
 
-        const [profilePayload, booksPayload, ordersPayload, customersPayload] =
+        const [
+          profilePayload,
+          booksPayload,
+          ordersPayload,
+          dashboardOrdersPayload,
+          customersPayload,
+        ] =
           await Promise.all([
             parseJsonResponse(profileResponse),
             parseJsonResponse(booksResponse),
             parseJsonResponse(ordersResponse),
+            parseJsonResponse(dashboardOrdersResponse),
             parseJsonResponse(customersResponse),
           ]);
 
@@ -98,6 +133,7 @@ function AdminDashboard() {
           profileResponse.status === 401 ||
           booksResponse.status === 401 ||
           ordersResponse.status === 401 ||
+          dashboardOrdersResponse.status === 401 ||
           customersResponse.status === 401
         ) {
           logoutAndRedirect(navigate);
@@ -107,7 +143,8 @@ function AdminDashboard() {
         if (!profileResponse.ok) {
           setError(profilePayload?.error || 'Unable to load admin profile.');
           setBooks([]);
-          setOrders([]);
+          setAdminOrders([]);
+          setAllRecentOrders([]);
           setCustomers([]);
           return;
         }
@@ -120,40 +157,57 @@ function AdminDashboard() {
 
         setProfileName(profilePayload?.user?.name || 'Admin');
 
-        if (!booksResponse.ok || !ordersResponse.ok || !customersResponse.ok) {
+        if (
+          !booksResponse.ok ||
+          !ordersResponse.ok ||
+          !dashboardOrdersResponse.ok ||
+          !customersResponse.ok
+        ) {
           const apiError =
             booksPayload?.error ||
             ordersPayload?.error ||
+            dashboardOrdersPayload?.error ||
             customersPayload?.error ||
             'Unable to load dashboard data.';
 
           setError(apiError);
           setBooks(Array.isArray(booksPayload) ? booksPayload : []);
-          setOrders(
+          setAdminOrders(
             Array.isArray(ordersPayload?.orders)
               ? ordersPayload.orders
               : Array.isArray(ordersPayload)
                 ? ordersPayload
                 : []
           );
+          setAllRecentOrders(
+            Array.isArray(dashboardOrdersPayload?.all_recent_orders)
+              ? dashboardOrdersPayload.all_recent_orders
+              : []
+          );
           setCustomers(Array.isArray(customersPayload) ? customersPayload : []);
           return;
         }
 
         setBooks(Array.isArray(booksPayload) ? booksPayload : []);
-        setOrders(
+        setAdminOrders(
           Array.isArray(ordersPayload?.orders)
             ? ordersPayload.orders
             : Array.isArray(ordersPayload)
               ? ordersPayload
               : []
         );
+        setAllRecentOrders(
+          Array.isArray(dashboardOrdersPayload?.all_recent_orders)
+            ? dashboardOrdersPayload.all_recent_orders
+            : []
+        );
         setCustomers(Array.isArray(customersPayload) ? customersPayload : []);
       } catch {
         if (!isCancelled) {
           setError('Unable to connect to server.');
           setBooks([]);
-          setOrders([]);
+          setAdminOrders([]);
+          setAllRecentOrders([]);
           setCustomers([]);
         }
       } finally {
@@ -172,14 +226,14 @@ function AdminDashboard() {
 
   const filteredOrders = useMemo(() => {
     const periodStart = getPeriodStart(selectedPeriod);
-    return orders.filter((order) => {
+    return allRecentOrders.filter((order) => {
       const date = getOrderDate(order);
       if (!date) {
         return false;
       }
       return date >= periodStart;
     });
-  }, [orders, selectedPeriod]);
+  }, [allRecentOrders, selectedPeriod]);
 
   const totalRevenue = useMemo(
     () => filteredOrders.reduce((sum, order) => sum + numberValue(order?.total), 0),
@@ -211,14 +265,24 @@ function AdminDashboard() {
   }, [books]);
 
   const recentOrders = useMemo(() => {
-    return [...orders]
+    return [...allRecentOrders]
       .sort((a, b) => {
         const aDate = getOrderDate(a);
         const bDate = getOrderDate(b);
         return (bDate?.getTime() || 0) - (aDate?.getTime() || 0);
       })
       .slice(0, 8);
-  }, [orders]);
+  }, [allRecentOrders]);
+
+  const adminRecentOrders = useMemo(() => {
+    return [...adminOrders]
+      .sort((a, b) => {
+        const aDate = getOrderDate(a);
+        const bDate = getOrderDate(b);
+        return (bDate?.getTime() || 0) - (aDate?.getTime() || 0);
+      })
+      .slice(0, 8);
+  }, [adminOrders]);
 
   const stats = [
     {
@@ -324,12 +388,7 @@ function AdminDashboard() {
 
             <section className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
               <div className="xl:col-span-2 rounded-xl border border-slate-800/60 bg-slate-900/40 p-4">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-white">Recent Orders</h2>
-                  <Link to="/orders" className="text-sm text-emerald-300 hover:text-emerald-200">
-                    Open order history
-                  </Link>
-                </div>
+                <h2 className="text-lg font-semibold text-white mb-4">All Recent Orders</h2>
                 {recentOrders.length === 0 ? (
                   <p className="text-sm text-slate-400">No orders available.</p>
                 ) : (
@@ -350,6 +409,9 @@ function AdminDashboard() {
                               <p className="text-xs text-slate-400">
                                 {getOrderDate(order)?.toLocaleString() || 'No date'}
                               </p>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                {getOrderOwnerLabel(order)}
+                              </p>
                             </div>
                             <p className="text-sm font-semibold text-emerald-300">
                               ${numberValue(order?.total).toFixed(2)}
@@ -363,23 +425,60 @@ function AdminDashboard() {
               </div>
 
               <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-4">
-                <h2 className="text-lg font-semibold text-white mb-4">Low Stock</h2>
-                {lowStockBooks.length === 0 ? (
-                  <p className="text-sm text-slate-400">No low-stock books right now.</p>
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold text-white">Admin Recent Orders</h2>
+                  <Link to="/orders" className="text-xs text-emerald-300 hover:text-emerald-200">
+                    Open mine
+                  </Link>
+                </div>
+                {adminRecentOrders.length === 0 ? (
+                  <p className="text-sm text-slate-400">No recent admin orders.</p>
                 ) : (
                   <div className="space-y-2">
-                    {lowStockBooks.map((book) => (
-                      <div
-                        key={book.id}
-                        className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2"
-                      >
-                        <p className="text-sm font-medium text-white">{book.title}</p>
-                        <p className="text-xs text-amber-300">Stock left: {book.stock}</p>
-                      </div>
-                    ))}
+                    {adminRecentOrders.map((order, index) => {
+                      const orderId = order?.id ? String(order.id) : String(order?.orderNumber || '');
+                      return (
+                        <Link
+                          key={orderId || `admin-order-${index}`}
+                          to={orderId ? `/orders/${encodeURIComponent(orderId)}` : '/orders'}
+                          className="block rounded-lg border border-slate-800/60 bg-slate-800/30 px-3 py-2 hover:border-emerald-500/40 transition-colors"
+                        >
+                          <p className="text-sm font-semibold text-white truncate">
+                            {order?.orderNumber || `Order #${orderId || 'Unknown'}`}
+                          </p>
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            <p className="text-[11px] text-slate-400">
+                              {getOrderDate(order)?.toLocaleString() || 'No date'}
+                            </p>
+                            <p className="text-sm font-semibold text-emerald-300">
+                              ${numberValue(order?.total).toFixed(2)}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
               </div>
+            </section>
+
+            <section className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-4 mb-6">
+              <h2 className="text-lg font-semibold text-white mb-4">Low Stock</h2>
+              {lowStockBooks.length === 0 ? (
+                <p className="text-sm text-slate-400">No low-stock books right now.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {lowStockBooks.map((book) => (
+                    <div
+                      key={book.id}
+                      className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2"
+                    >
+                      <p className="text-sm font-medium text-white">{book.title}</p>
+                      <p className="text-xs text-amber-300">Stock left: {book.stock}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
 
             <section className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-4">
