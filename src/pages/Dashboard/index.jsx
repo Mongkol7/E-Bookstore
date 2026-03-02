@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StoreNavbar from '../../components/StoreNavbar';
 import { logoutAndRedirect } from '../../utils/auth';
@@ -211,6 +211,54 @@ function buildTrendSeries(orders, period) {
   }));
 }
 
+function buildCandleSeries(trendSeries) {
+  if (!Array.isArray(trendSeries) || trendSeries.length === 0) {
+    return [];
+  }
+
+  let previousClose = 64;
+  const rawSeries = trendSeries.map((bucket, index) => {
+    const revenuePulse = numberValue(bucket?.revenueHeight);
+    const orderPulse = numberValue(bucket?.orderHeight);
+    const wave = Math.sin(index * 1.2) * 1.8 + Math.cos(index * 0.7) * 1.2;
+    const momentum = (revenuePulse - 50) * 0.08 + (orderPulse - 50) * 0.06 + wave;
+
+    const open = previousClose;
+    const close = Math.max(12, open + momentum);
+    const high =
+      Math.max(open, close) + 1.8 + (Math.max(revenuePulse, orderPulse) / 100) * 2.8;
+    const low =
+      Math.max(
+        4,
+        Math.min(open, close) - (1.5 + (Math.max(0, 100 - revenuePulse) / 100) * 2.2),
+      );
+
+    previousClose = close;
+
+    return {
+      key: String(bucket?.key || index),
+      label: String(bucket?.label || index + 1),
+      open,
+      close,
+      high,
+      low,
+      isUp: close >= open,
+    };
+  });
+
+  const minLow = Math.min(...rawSeries.map((item) => item.low));
+  const maxHigh = Math.max(...rawSeries.map((item) => item.high));
+  const range = Math.max(1, maxHigh - minLow);
+
+  return rawSeries.map((item) => ({
+    ...item,
+    lowPct: ((item.low - minLow) / range) * 100,
+    highPct: ((item.high - minLow) / range) * 100,
+    openPct: ((item.open - minLow) / range) * 100,
+    closePct: ((item.close - minLow) / range) * 100,
+  }));
+}
+
 function AdminDashboard() {
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
@@ -259,6 +307,26 @@ function AdminDashboard() {
     image: '',
     published_date: '',
   });
+
+  const revenueSectionRef = useRef(null);
+  const breakdownSectionRef = useRef(null);
+  const candleSectionRef = useRef(null);
+  const overviewSectionRef = useRef(null);
+  const graphSectionRef = useRef(null);
+  const ordersSectionRef = useRef(null);
+  const managementSectionRef = useRef(null);
+  const [hasRevenueSectionEntered, setHasRevenueSectionEntered] = useState(false);
+  const [hasBreakdownSectionEntered, setHasBreakdownSectionEntered] = useState(false);
+  const [hasCandleSectionEntered, setHasCandleSectionEntered] = useState(false);
+  const [isRevenueSectionVisible, setIsRevenueSectionVisible] = useState(false);
+  const [isBreakdownSectionVisible, setIsBreakdownSectionVisible] = useState(false);
+  const [isCandleSectionVisible, setIsCandleSectionVisible] = useState(false);
+  const [revenueAnimationTick, setRevenueAnimationTick] = useState(0);
+  const [breakdownAnimationTick, setBreakdownAnimationTick] = useState(0);
+  const [candleAnimationTick, setCandleAnimationTick] = useState(0);
+  const [pendingRevenueReplay, setPendingRevenueReplay] = useState(true);
+  const [pendingBreakdownReplay, setPendingBreakdownReplay] = useState(true);
+  const [pendingCandleReplay, setPendingCandleReplay] = useState(true);
 
   useEffect(() => {
     let isCancelled = false;
@@ -420,6 +488,139 @@ function AdminDashboard() {
       isCancelled = true;
     };
   }, [navigate]);
+
+  useEffect(() => {
+    if (loading) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.target === revenueSectionRef.current) {
+            setIsRevenueSectionVisible(entry.isIntersecting);
+            if (entry.isIntersecting) {
+              setHasRevenueSectionEntered(true);
+            }
+          }
+
+          if (entry.target === breakdownSectionRef.current) {
+            setIsBreakdownSectionVisible(entry.isIntersecting);
+            if (entry.isIntersecting) {
+              setHasBreakdownSectionEntered(true);
+            }
+          }
+
+          if (entry.target === candleSectionRef.current) {
+            setIsCandleSectionVisible(entry.isIntersecting);
+            if (entry.isIntersecting) {
+              setHasCandleSectionEntered(true);
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.2,
+      },
+    );
+
+    const revenueElement = revenueSectionRef.current;
+    const breakdownElement = breakdownSectionRef.current;
+    const candleElement = candleSectionRef.current;
+
+    if (revenueElement) {
+      observer.observe(revenueElement);
+      const rect = revenueElement.getBoundingClientRect();
+      const viewportHeight =
+        window.innerHeight || document.documentElement.clientHeight;
+      if (rect.top < viewportHeight && rect.bottom > 0) {
+        setIsRevenueSectionVisible(true);
+        setHasRevenueSectionEntered(true);
+      }
+    }
+    if (breakdownElement) {
+      observer.observe(breakdownElement);
+      const rect = breakdownElement.getBoundingClientRect();
+      const viewportHeight =
+        window.innerHeight || document.documentElement.clientHeight;
+      if (rect.top < viewportHeight && rect.bottom > 0) {
+        setIsBreakdownSectionVisible(true);
+        setHasBreakdownSectionEntered(true);
+      }
+    }
+    if (candleElement) {
+      observer.observe(candleElement);
+      const rect = candleElement.getBoundingClientRect();
+      const viewportHeight =
+        window.innerHeight || document.documentElement.clientHeight;
+      if (rect.top < viewportHeight && rect.bottom > 0) {
+        setIsCandleSectionVisible(true);
+        setHasCandleSectionEntered(true);
+      }
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [loading]);
+
+  useEffect(() => {
+    if (hasRevenueSectionEntered) {
+      setPendingRevenueReplay(true);
+    }
+    if (hasBreakdownSectionEntered) {
+      setPendingBreakdownReplay(true);
+    }
+    if (hasCandleSectionEntered) {
+      setPendingCandleReplay(true);
+    }
+  }, [
+    selectedPeriod,
+    hasRevenueSectionEntered,
+    hasBreakdownSectionEntered,
+    hasCandleSectionEntered,
+  ]);
+
+  useEffect(() => {
+    if (
+      hasRevenueSectionEntered &&
+      isRevenueSectionVisible &&
+      pendingRevenueReplay
+    ) {
+      setRevenueAnimationTick((previous) => previous + 1);
+      setPendingRevenueReplay(false);
+    }
+  }, [
+    hasRevenueSectionEntered,
+    isRevenueSectionVisible,
+    pendingRevenueReplay,
+  ]);
+
+  useEffect(() => {
+    if (
+      hasBreakdownSectionEntered &&
+      isBreakdownSectionVisible &&
+      pendingBreakdownReplay
+    ) {
+      setBreakdownAnimationTick((previous) => previous + 1);
+      setPendingBreakdownReplay(false);
+    }
+  }, [
+    hasBreakdownSectionEntered,
+    isBreakdownSectionVisible,
+    pendingBreakdownReplay,
+  ]);
+
+  useEffect(() => {
+    if (
+      hasCandleSectionEntered &&
+      isCandleSectionVisible &&
+      pendingCandleReplay
+    ) {
+      setCandleAnimationTick((previous) => previous + 1);
+      setPendingCandleReplay(false);
+    }
+  }, [hasCandleSectionEntered, isCandleSectionVisible, pendingCandleReplay]);
 
   const refreshBooks = async () => {
     const response = await apiFetch('/api/books', { method: 'GET' });
@@ -876,6 +1077,66 @@ function AdminDashboard() {
     () => buildTrendSeries(filteredOrders, selectedPeriod),
     [filteredOrders, selectedPeriod],
   );
+  const candleSeries = useMemo(
+    () => buildCandleSeries(trendSeries),
+    [trendSeries],
+  );
+  const candleLinePoints = useMemo(() => {
+    if (candleSeries.length === 0) {
+      return '';
+    }
+
+    return candleSeries
+      .map((candle, index) => {
+        const x =
+          candleSeries.length <= 1
+            ? 50
+            : (index / (candleSeries.length - 1)) * 100;
+        const y = 100 - candle.closePct;
+        return `${x},${y}`;
+      })
+      .join(' ');
+  }, [candleSeries]);
+
+  const handleSectionNavClick = (sectionId) => {
+    if (!sectionId) {
+      return;
+    }
+
+    const target = document.getElementById(sectionId);
+    if (!target) {
+      return;
+    }
+
+    const isPhone = window.matchMedia('(max-width: 639px)').matches;
+    const scrollOffset = isPhone ? 210 : 160;
+    const top =
+      target.getBoundingClientRect().top + window.scrollY - scrollOffset;
+    window.scrollTo({
+      top: Math.max(0, top),
+      behavior: 'smooth',
+    });
+  };
+
+  const dashboardSectionNav = [
+    { key: 'overview', label: 'Overview', sectionId: 'dashboard-overview' },
+    { key: 'graph', label: 'Graph', sectionId: 'dashboard-graph' },
+    {
+      key: 'recent-orders',
+      label: 'Recent Orders',
+      sectionId: 'dashboard-recent-orders',
+    },
+    {
+      key: 'low-stock',
+      label: 'Low Stock',
+      sectionId: 'dashboard-low-stock',
+    },
+    {
+      key: 'management',
+      label: 'Management Center',
+      sectionId: 'dashboard-management',
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
@@ -914,9 +1175,28 @@ function AdminDashboard() {
           </div>
         </div>
 
+        {!loading && (
+          <div className="sticky top-[124px] sm:top-[96px] z-20 mt-5 sm:mt-2 mb-8">
+            <div className="rounded-xl border border-white/10 bg-slate-900/75 backdrop-blur-md px-2 py-2.5 sm:py-2 overflow-x-auto">
+              <div className="inline-flex items-center gap-2 min-w-max">
+                {dashboardSectionNav.map((section) => (
+                  <button
+                    key={section.key}
+                    type="button"
+                    onClick={() => handleSectionNavClick(section.sectionId)}
+                    className="px-3.5 py-2 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-sm font-medium text-slate-200 border border-white/10 bg-white/5 hover:bg-emerald-500/15 hover:border-emerald-500/30 hover:text-emerald-300 transition-all"
+                  >
+                    {section.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={`stats-skeleton-${index}`}
@@ -953,7 +1233,11 @@ function AdminDashboard() {
         {!loading && (
           <>
             {/* Modern Stats Cards */}
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <section
+              id="dashboard-overview"
+              ref={overviewSectionRef}
+              className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 scroll-mt-32"
+            >
               {stats.map((stat, index) => (
                 <div
                   key={stat.label}
@@ -983,8 +1267,16 @@ function AdminDashboard() {
               ))}
             </section>
 
-            {/* Crypto-Style Line Graph */}
-            <section className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 mb-8 overflow-hidden">
+            <div
+              id="dashboard-graph"
+              ref={graphSectionRef}
+              className="scroll-mt-32"
+            >
+              {/* Crypto-Style Line Graph */}
+              <section
+                ref={revenueSectionRef}
+                className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 mb-8 overflow-hidden"
+              >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-white mb-1">
@@ -1023,14 +1315,18 @@ function AdminDashboard() {
                 </div>
               ) : (
                 <div
-                  key={`line-chart-${selectedPeriod}`}
+                  key={`line-chart-${selectedPeriod}-${revenueAnimationTick}`}
                   className="relative h-64 overflow-hidden"
                 >
                   <svg
                     viewBox={`0 0 ${trendSeries.length * 100} 200`}
                     className="w-full h-full"
                     preserveAspectRatio="none"
-                    style={{ animation: 'fadeIn 0.8s ease-out' }}
+                    style={{
+                      animation: hasRevenueSectionEntered
+                        ? 'fadeIn 0.8s ease-out'
+                        : 'none',
+                    }}
                   >
                     <defs>
                       <linearGradient
@@ -1080,7 +1376,9 @@ function AdminDashboard() {
                       `}
                       fill="url(#revenueGradient)"
                       style={{
-                        animation: 'pathGrow 1.2s ease-out both',
+                        animation: hasRevenueSectionEntered
+                          ? 'pathGrow 1.2s ease-out both'
+                          : 'none',
                       }}
                     />
 
@@ -1102,7 +1400,9 @@ function AdminDashboard() {
                       strokeLinejoin="round"
                       filter="url(#glow)"
                       style={{
-                        animation: 'pathDraw 1.5s ease-out both',
+                        animation: hasRevenueSectionEntered
+                          ? 'pathDraw 1.5s ease-out both'
+                          : 'none',
                         strokeDasharray: trendSeries.length * 100,
                         strokeDashoffset: trendSeries.length * 100,
                       }}
@@ -1134,7 +1434,9 @@ function AdminDashboard() {
                           r="4"
                           fill="rgba(16, 185, 129, 0.3)"
                           style={{
-                            animation: `pointPop 0.4s ease-out ${0.8 + i * 0.05}s both`,
+                            animation: hasRevenueSectionEntered
+                              ? `pointPop 0.4s ease-out ${0.8 + i * 0.05}s both`
+                              : 'none',
                           }}
                         />
                         <circle
@@ -1144,7 +1446,9 @@ function AdminDashboard() {
                           fill="#10b981"
                           className="graph-point"
                           style={{
-                            animation: `pointPop 0.4s ease-out ${0.85 + i * 0.05}s both`,
+                            animation: hasRevenueSectionEntered
+                              ? `pointPop 0.4s ease-out ${0.85 + i * 0.05}s both`
+                              : 'none',
                             cursor: 'pointer',
                           }}
                         />
@@ -1159,7 +1463,9 @@ function AdminDashboard() {
                         key={`label-${index}`}
                         className="text-xs text-slate-500 font-medium"
                         style={{
-                          animation: `fadeIn 0.4s ease-out ${1.2 + index * 0.05}s both`,
+                          animation: hasRevenueSectionEntered
+                            ? `fadeIn 0.4s ease-out ${1.2 + index * 0.05}s both`
+                            : 'none',
                         }}
                       >
                         {bucket.label}
@@ -1197,10 +1503,13 @@ function AdminDashboard() {
                   </p>
                 </div>
               </div>
-            </section>
+              </section>
 
-            {/* Bar Chart Section */}
-            <section className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 mb-8">
+              {/* Bar Chart Section */}
+              <section
+                ref={breakdownSectionRef}
+                className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 mb-8"
+              >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-white mb-1">
@@ -1229,7 +1538,7 @@ function AdminDashboard() {
               ) : (
                 <div className="overflow-x-auto pb-2">
                   <div
-                    key={selectedPeriod}
+                    key={`daily-breakdown-${selectedPeriod}-${breakdownAnimationTick}`}
                     className="grid gap-4 min-w-[680px]"
                     style={{
                       gridTemplateColumns: `repeat(${trendSeries.length}, minmax(80px, 1fr))`,
@@ -1244,7 +1553,9 @@ function AdminDashboard() {
                               height: `${bucket.revenueHeight}%`,
                               minHeight: bucket.revenue > 0 ? '8px' : '0px',
                               transformOrigin: 'bottom',
-                              animation: `chartBarGrow 700ms ease-out ${index * 60}ms both`,
+                              animation: hasBreakdownSectionEntered
+                                ? `chartBarGrow 700ms ease-out ${index * 60}ms both`
+                                : 'none',
                             }}
                             title={`Revenue: ${formatCompactCurrency(bucket.revenue)}`}
                           />
@@ -1254,7 +1565,9 @@ function AdminDashboard() {
                               height: `${bucket.orderHeight}%`,
                               minHeight: bucket.orders > 0 ? '8px' : '0px',
                               transformOrigin: 'bottom',
-                              animation: `chartBarGrow 700ms ease-out ${index * 60 + 40}ms both`,
+                              animation: hasBreakdownSectionEntered
+                                ? `chartBarGrow 700ms ease-out ${index * 60 + 40}ms both`
+                                : 'none',
                             }}
                             title={`Orders: ${bucket.orders}`}
                           />
@@ -1275,12 +1588,178 @@ function AdminDashboard() {
                   </div>
                 </div>
               )}
-            </section>
+              </section>
+
+              {/* Candlestick Pattern Section */}
+              <section
+                ref={candleSectionRef}
+                className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 mb-8 overflow-hidden"
+              >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white mb-1">
+                    Pattern Candles
+                  </h2>
+                  <p className="text-sm text-slate-400">
+                    Crypto-style momentum view derived from current period flow
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-4 text-xs font-medium">
+                  <span className="inline-flex items-center gap-2 text-emerald-300">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                    Bull candle
+                  </span>
+                  <span className="inline-flex items-center gap-2 text-rose-300">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                    Bear candle
+                  </span>
+                </div>
+              </div>
+
+              {candleSeries.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-slate-400">No pattern data available</p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-indigo-500/20 bg-[radial-gradient(circle_at_20%_10%,rgba(99,102,241,0.18),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.95),rgba(15,23,42,0.8))] p-3 sm:p-4">
+                  <div
+                    key={`candles-${selectedPeriod}-${candleAnimationTick}`}
+                    className="relative h-[300px] sm:h-[320px] overflow-hidden rounded-lg border border-white/10 bg-[linear-gradient(rgba(99,102,241,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.08)_1px,transparent_1px)] [background-size:28px_28px,28px_28px]"
+                  >
+                    <svg
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      className="absolute inset-0 w-full h-full pointer-events-none"
+                    >
+                      <polyline
+                        points={candleLinePoints}
+                        fill="none"
+                        stroke="rgba(99,102,241,0.85)"
+                        strokeWidth="0.9"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          animation: hasCandleSectionEntered
+                            ? 'candleLineDraw 1.1s ease-out both'
+                            : 'none',
+                          strokeDasharray: 300,
+                          strokeDashoffset: 300,
+                        }}
+                      />
+                    </svg>
+
+                    <div
+                      className="absolute inset-0 grid gap-1 sm:gap-2 px-2 sm:px-3 py-5"
+                      style={{
+                        gridTemplateColumns: `repeat(${candleSeries.length}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      {candleSeries.map((candle, index) => {
+                        const bodyBottom = Math.min(
+                          candle.openPct,
+                          candle.closePct,
+                        );
+                        const bodyHeight = Math.max(
+                          2.4,
+                          Math.abs(candle.closePct - candle.openPct),
+                        );
+                        const wickBottom = candle.lowPct;
+                        const wickHeight = Math.max(
+                          3,
+                          candle.highPct - candle.lowPct,
+                        );
+
+                        return (
+                          <div
+                            key={`candle-${candle.key}-${index}`}
+                            className="relative"
+                          >
+                            <div
+                              className={`absolute left-1/2 -translate-x-1/2 w-[2px] rounded-full ${
+                                candle.isUp ? 'bg-emerald-300/95' : 'bg-rose-300/95'
+                              }`}
+                              style={{
+                                bottom: `${wickBottom}%`,
+                                height: `${wickHeight}%`,
+                                animation: hasCandleSectionEntered
+                                  ? `candleRise 520ms ease-out ${index * 45}ms both`
+                                  : 'none',
+                              }}
+                            />
+                            <div
+                              className={`absolute left-1/2 -translate-x-1/2 w-[72%] max-w-[16px] rounded-[3px] border ${
+                                candle.isUp
+                                  ? 'bg-emerald-400/90 border-emerald-200/70'
+                                  : 'bg-rose-400/90 border-rose-200/70'
+                              }`}
+                              style={{
+                                bottom: `${bodyBottom}%`,
+                                height: `${bodyHeight}%`,
+                                animation: hasCandleSectionEntered
+                                  ? `candleRise 620ms ease-out ${index * 45 + 40}ms both`
+                                  : 'none',
+                                boxShadow: candle.isUp
+                                  ? '0 0 16px rgba(16,185,129,0.32)'
+                                  : '0 0 16px rgba(244,63,94,0.28)',
+                              }}
+                              title={`${candle.label}: ${candle.isUp ? 'Bull' : 'Bear'} candle`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="absolute bottom-1 left-0 right-0 px-2 sm:px-3">
+                      <div
+                        className="grid gap-1 sm:gap-2"
+                        style={{
+                          gridTemplateColumns: `repeat(${candleSeries.length}, minmax(0, 1fr))`,
+                        }}
+                      >
+                        {candleSeries.map((candle, index) => {
+                          const showLabelEvery = Math.max(
+                            1,
+                            Math.ceil(candleSeries.length / 6),
+                          );
+                          const shouldShow =
+                            index % showLabelEvery === 0 ||
+                            index === candleSeries.length - 1;
+
+                          return (
+                            <div
+                              key={`candle-label-${candle.key}-${index}`}
+                              className="text-center"
+                            >
+                              {shouldShow ? (
+                                <span className="text-[10px] sm:text-xs text-slate-400">
+                                  {candle.label}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] sm:text-xs text-transparent">
+                                  .
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              </section>
+            </div>
 
             {/* Orders and Info Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div
+              ref={ordersSectionRef}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 scroll-mt-32"
+            >
               {/* Recent Orders - Takes 2 columns */}
-              <div className="lg:col-span-2 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6">
+              <div
+                id="dashboard-recent-orders"
+                className="lg:col-span-2 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 scroll-mt-32"
+              >
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-bold text-white mb-1">
@@ -1358,7 +1837,10 @@ function AdminDashboard() {
               </div>
 
               {/* Low Stock Alert */}
-              <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6">
+              <div
+                id="dashboard-low-stock"
+                className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 scroll-mt-32"
+              >
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-bold text-white mb-1">
@@ -1403,7 +1885,11 @@ function AdminDashboard() {
             </div>
 
             {/* Management Section */}
-            <section className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 mb-8">
+            <section
+              id="dashboard-management"
+              ref={managementSectionRef}
+              className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6 mb-8 scroll-mt-32"
+            >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-xl font-bold text-white mb-1">
@@ -2245,6 +2731,28 @@ function AdminDashboard() {
           }
           100% {
             transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        @keyframes candleRise {
+          0% {
+            transform: translate(-50%, 14px) scaleY(0.35);
+            opacity: 0;
+          }
+          100% {
+            transform: translate(-50%, 0) scaleY(1);
+            opacity: 1;
+          }
+        }
+
+        @keyframes candleLineDraw {
+          0% {
+            stroke-dashoffset: 300;
+            opacity: 0.2;
+          }
+          100% {
+            stroke-dashoffset: 0;
             opacity: 1;
           }
         }
