@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { logoutAndRedirect } from '../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../utils/api';
 import StoreNavbar from '../../components/StoreNavbar';
@@ -37,10 +37,14 @@ const EMPTY_ORDER = {
 function OrderDetailPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [order, setOrder] = useState(EMPTY_ORDER);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState('');
+  const isAllScope =
+    new URLSearchParams(location.search).get('scope') === 'all';
+  const backToOrders = isAllScope ? '/orders?scope=all' : '/orders';
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -100,7 +104,7 @@ function OrderDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
-        <StoreNavbar backTo="/orders" backLabel="Back to Orders" />
+        <StoreNavbar backTo={backToOrders} backLabel="Back to Orders" />
         <div className="max-w-7xl mx-auto px-4 py-10 text-slate-300">Loading order details...</div>
       </div>
     );
@@ -109,11 +113,11 @@ function OrderDetailPage() {
   if (notFound) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
-        <StoreNavbar backTo="/orders" backLabel="Back to Orders" />
+        <StoreNavbar backTo={backToOrders} backLabel="Back to Orders" />
         <div className="max-w-7xl mx-auto px-4 py-10">
           <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-6 text-red-200">
             Order not found.
-            <Link to="/orders" className="ml-2 text-emerald-300 hover:text-emerald-200">Back to Orders</Link>
+            <Link to={backToOrders} className="ml-2 text-emerald-300 hover:text-emerald-200">Back to Orders</Link>
           </div>
         </div>
       </div>
@@ -123,7 +127,7 @@ function OrderDetailPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-950 font-['Outfit',sans-serif]">
-        <StoreNavbar backTo="/orders" backLabel="Back to Orders" />
+        <StoreNavbar backTo={backToOrders} backLabel="Back to Orders" />
         <div className="max-w-7xl mx-auto px-4 py-10">
           <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-6 text-red-200">
             {error}
@@ -141,7 +145,7 @@ function OrderDetailPage() {
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-teal-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      <StoreNavbar backTo="/orders" backLabel="Back to Orders" />
+      <StoreNavbar backTo={backToOrders} backLabel="Back to Orders" />
 
       <main className="max-w-7xl mx-auto py-6 sm:py-12 px-3 sm:px-4 md:px-6 lg:px-8 relative">
         {/* Order Header */}

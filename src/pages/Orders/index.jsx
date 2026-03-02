@@ -215,7 +215,10 @@ function OrdersPage() {
               return (
                 <Link
                   key={`${routeId}-${index}`}
-                  to={`/orders/${encodeURIComponent(routeId)}`}
+                  to={{
+                    pathname: `/orders/${encodeURIComponent(routeId)}`,
+                    ...(isAllScope ? { search: '?scope=all' } : {}),
+                  }}
                   className={`relative block rounded-xl p-4 transition-colors ${
                     isHighlighted
                       ? 'bg-slate-900/60 border border-emerald-400/90 shadow-[0_0_0_2px_rgba(16,185,129,0.9),0_0_30px_rgba(16,185,129,0.75),0_0_60px_rgba(16,185,129,0.45)]'
