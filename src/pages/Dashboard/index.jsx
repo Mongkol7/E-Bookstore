@@ -1792,8 +1792,8 @@ function AdminDashboard() {
                           key={orderId || `order-${index}`}
                           to={
                             orderId
-                              ? `/orders/${encodeURIComponent(orderId)}`
-                              : '/orders'
+                              ? `/orders/${encodeURIComponent(orderId)}?scope=all`
+                              : '/orders?scope=all'
                           }
                           className="block group rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-4 hover:bg-white/10 hover:border-emerald-500/30 transition-all"
                         >
