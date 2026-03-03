@@ -975,57 +975,13 @@ function AdminDashboard() {
       return;
     }
 
-    const sourceBook = books.find(
-      (book) => String(book?.id ?? '') === String(bookId),
-    );
-
-    if (!sourceBook) {
-      setManagerMessage({
-        type: 'error',
-        text: 'Book not found. Refresh and try again.',
-      });
-      return;
-    }
-
-    const payload = {
-      id: numberValue(sourceBook?.id),
-      title: String(sourceBook?.title || '').trim(),
-      description: String(sourceBook?.description || '').trim(),
-      price: numberValue(sourceBook?.price),
-      stock: Math.max(0, numberValue(sourceBook?.stock) + restockAmount),
-      author_id: numberValue(sourceBook?.author_id ?? sourceBook?.authorId),
-      category_id: numberValue(
-        sourceBook?.category_id ?? sourceBook?.categoryId,
-      ),
-      image: String(sourceBook?.image || '').trim(),
-      published_date: String(
-        sourceBook?.published_date ?? sourceBook?.publishedDate ?? '',
-      ).trim(),
-    };
-
-    if (
-      payload.id <= 0 ||
-      !payload.title ||
-      !payload.description ||
-      !payload.image ||
-      !payload.published_date ||
-      payload.author_id <= 0 ||
-      payload.category_id <= 0
-    ) {
-      setManagerMessage({
-        type: 'error',
-        text: `Cannot restock "${payload.title || 'book'}" because it has incomplete book data. Edit the book first.`,
-      });
-      return;
-    }
-
     setActiveRestockBookId(key);
     try {
       const success = await submitManagerRequest(
-        '/api/books/put',
+        '/api/books/stock',
         'PUT',
-        payload,
-        `Restocked "${payload.title}" by ${restockAmount}.`,
+        { id: numberValue(bookId), quantity: restockAmount },
+        `Restocked by ${restockAmount} successfully.`,
       );
 
       if (!success) {
@@ -1079,7 +1035,7 @@ function AdminDashboard() {
         title: book.title || 'Untitled Book',
         stock: numberValue(book.stock),
       }))
-      .filter((book) => book.stock > 0 && book.stock <= 10)
+      .filter((book) => book.stock <= 10)
       .sort((a, b) => a.stock - b.stock)
       .slice(0, 6);
   }, [books]);
@@ -1966,7 +1922,9 @@ function AdminDashboard() {
                         </p>
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-xs text-red-400">
-                            Only {book.stock} left
+                            {book.stock <= 0
+                              ? 'Out of stock'
+                              : `Only ${book.stock} left`}
                           </p>
                           <div className="flex items-center gap-2">
                             <input
