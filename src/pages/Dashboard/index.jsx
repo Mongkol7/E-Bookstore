@@ -307,6 +307,8 @@ function AdminDashboard() {
     image: '',
     published_date: '',
   });
+  const [lowStockRestockByBookId, setLowStockRestockByBookId] = useState({});
+  const [activeRestockBookId, setActiveRestockBookId] = useState(null);
 
   const revenueSectionRef = useRef(null);
   const breakdownSectionRef = useRef(null);
@@ -948,6 +950,96 @@ function AdminDashboard() {
     );
     if (success) {
       await refreshBooks();
+    }
+  };
+
+  const setLowStockRestockAmount = (bookId, rawValue) => {
+    const key = String(bookId);
+    const sanitized = String(rawValue || '').replace(/[^\d]/g, '');
+    setLowStockRestockByBookId((prev) => ({
+      ...prev,
+      [key]: sanitized,
+    }));
+  };
+
+  const handleLowStockRestock = async (bookId) => {
+    const key = String(bookId);
+    const requestedValue = numberValue(lowStockRestockByBookId[key]);
+    const restockAmount = Math.floor(requestedValue);
+
+    if (restockAmount <= 0) {
+      setManagerMessage({
+        type: 'error',
+        text: 'Enter a restock quantity greater than 0.',
+      });
+      return;
+    }
+
+    const sourceBook = books.find(
+      (book) => String(book?.id ?? '') === String(bookId),
+    );
+
+    if (!sourceBook) {
+      setManagerMessage({
+        type: 'error',
+        text: 'Book not found. Refresh and try again.',
+      });
+      return;
+    }
+
+    const payload = {
+      id: numberValue(sourceBook?.id),
+      title: String(sourceBook?.title || '').trim(),
+      description: String(sourceBook?.description || '').trim(),
+      price: numberValue(sourceBook?.price),
+      stock: Math.max(0, numberValue(sourceBook?.stock) + restockAmount),
+      author_id: numberValue(sourceBook?.author_id ?? sourceBook?.authorId),
+      category_id: numberValue(
+        sourceBook?.category_id ?? sourceBook?.categoryId,
+      ),
+      image: String(sourceBook?.image || '').trim(),
+      published_date: String(
+        sourceBook?.published_date ?? sourceBook?.publishedDate ?? '',
+      ).trim(),
+    };
+
+    if (
+      payload.id <= 0 ||
+      !payload.title ||
+      !payload.description ||
+      !payload.image ||
+      !payload.published_date ||
+      payload.author_id <= 0 ||
+      payload.category_id <= 0
+    ) {
+      setManagerMessage({
+        type: 'error',
+        text: `Cannot restock "${payload.title || 'book'}" because it has incomplete book data. Edit the book first.`,
+      });
+      return;
+    }
+
+    setActiveRestockBookId(key);
+    try {
+      const success = await submitManagerRequest(
+        '/api/books/put',
+        'PUT',
+        payload,
+        `Restocked "${payload.title}" by ${restockAmount}.`,
+      );
+
+      if (!success) {
+        return;
+      }
+
+      await refreshBooks();
+      setLowStockRestockByBookId((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } finally {
+      setActiveRestockBookId(null);
     }
   };
 
@@ -1858,24 +1950,54 @@ function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {lowStockBooks.map((book) => (
-                      <div
+                    {lowStockBooks.map((book) => {
+                      const bookIdKey = String(book?.id ?? '');
+                      const restockAmount =
+                        lowStockRestockByBookId[bookIdKey] || '';
+                      const isRestocking = activeRestockBookId === bookIdKey;
+
+                      return (
+                        <div
                         key={book.id}
                         className="rounded-xl bg-red-500/10 border border-red-500/20 p-4"
                       >
                         <p className="font-semibold text-white mb-1 text-sm">
                           {book.title}
                         </p>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-xs text-red-400">
                             Only {book.stock} left
                           </p>
-                          <button className="text-xs text-emerald-400 hover:text-emerald-300 font-medium">
-                            Restock →
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={restockAmount}
+                              onChange={(event) =>
+                                setLowStockRestockAmount(
+                                  book.id,
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="+10"
+                              className="w-20 rounded-lg border border-white/15 bg-slate-900/60 px-2 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleLowStockRestock(book.id);
+                              }}
+                              disabled={savingManager || isRestocking}
+                              className="text-xs rounded-lg border border-emerald-400/30 px-2.5 py-1 text-emerald-300 hover:text-emerald-200 hover:border-emerald-300/50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {isRestocking ? 'Saving...' : 'Restock'}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -2806,3 +2928,4 @@ function AdminDashboard() {
 }
 
 export default AdminDashboard;
+
