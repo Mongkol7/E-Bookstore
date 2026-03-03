@@ -746,17 +746,16 @@ function AdminDashboard() {
   const handleCustomerSubmit = async (event) => {
     event.preventDefault();
 
-    if (!editingCustomerId && !customerForm.password.trim()) {
+    if (!editingCustomerId) {
       setManagerMessage({
         type: 'error',
-        text: 'Password is required when creating a customer.',
+        text: 'Adding customers is disabled here. Select a customer and use Edit.',
       });
       return;
     }
 
-    const isEditing = editingCustomerId !== null;
     const payload = {
-      ...(isEditing ? { id: editingCustomerId } : {}),
+      id: editingCustomerId,
       first_name: customerForm.first_name.trim(),
       last_name: customerForm.last_name.trim(),
       email: customerForm.email.trim(),
@@ -768,12 +767,10 @@ function AdminDashboard() {
     };
 
     const success = await submitManagerRequest(
-      isEditing ? '/api/customers/put' : '/api/customers/post',
-      isEditing ? 'PUT' : 'POST',
+      '/api/customers/put',
+      'PUT',
       payload,
-      isEditing
-        ? 'Customer updated successfully.'
-        : 'Customer created successfully.',
+      'Customer updated successfully.',
     );
 
     if (!success) {
@@ -1975,10 +1972,16 @@ function AdminDashboard() {
                     <h3 className="text-base font-semibold text-white mb-3">
                       {editingCustomerId
                         ? `Edit Customer #${editingCustomerId}`
-                        : 'Add New Customer'}
+                        : 'Customer Editing'}
                     </h3>
+                    {!editingCustomerId && (
+                      <p className="text-xs text-slate-400 mb-1">
+                        Select a customer from the list and click Edit to update details.
+                      </p>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input
+                        disabled={!editingCustomerId}
                         value={customerForm.first_name}
                         onChange={(e) =>
                           setCustomerForm((prev) => ({
@@ -1990,6 +1993,7 @@ function AdminDashboard() {
                         className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                       />
                       <input
+                        disabled={!editingCustomerId}
                         value={customerForm.last_name}
                         onChange={(e) =>
                           setCustomerForm((prev) => ({
@@ -2002,6 +2006,7 @@ function AdminDashboard() {
                       />
                     </div>
                     <input
+                      disabled={!editingCustomerId}
                       value={customerForm.email}
                       onChange={(e) =>
                         setCustomerForm((prev) => ({
@@ -2014,6 +2019,7 @@ function AdminDashboard() {
                       className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                     />
                     <input
+                      disabled={!editingCustomerId}
                       value={customerForm.password}
                       onChange={(e) =>
                         setCustomerForm((prev) => ({
@@ -2021,15 +2027,12 @@ function AdminDashboard() {
                           password: e.target.value,
                         }))
                       }
-                      placeholder={
-                        editingCustomerId
-                          ? 'New password (optional)'
-                          : 'Password'
-                      }
+                      placeholder="New password (optional)"
                       type="password"
                       className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                     />
                     <input
+                      disabled={!editingCustomerId}
                       value={customerForm.phone}
                       onChange={(e) =>
                         setCustomerForm((prev) => ({
@@ -2041,6 +2044,7 @@ function AdminDashboard() {
                       className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                     />
                     <textarea
+                      disabled={!editingCustomerId}
                       value={customerForm.address}
                       onChange={(e) =>
                         setCustomerForm((prev) => ({
@@ -2055,14 +2059,12 @@ function AdminDashboard() {
                     <div className="flex flex-col sm:flex-row gap-3 pt-2">
                       <button
                         type="submit"
-                        disabled={savingManager}
+                        disabled={savingManager || !editingCustomerId}
                         className="flex-1 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg text-white font-semibold text-sm hover:from-emerald-600 hover:to-teal-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {savingManager
                           ? 'Saving...'
-                          : editingCustomerId
-                            ? 'Update Customer'
-                            : 'Add Customer'}
+                          : 'Update Customer'}
                       </button>
                       {editingCustomerId && (
                         <button
@@ -2804,4 +2806,3 @@ function AdminDashboard() {
 }
 
 export default AdminDashboard;
-
