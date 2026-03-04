@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import StoreNavbar from '../../components/StoreNavbar';
@@ -419,6 +419,7 @@ function AdminDashboard() {
   const graphSectionRef = useRef(null);
   const ordersSectionRef = useRef(null);
   const managementSectionRef = useRef(null);
+  const dashboardSectionNavRef = useRef(null);
   const [hasRevenueSectionEntered, setHasRevenueSectionEntered] = useState(false);
   const [hasBreakdownSectionEntered, setHasBreakdownSectionEntered] = useState(false);
   const [hasCandleSectionEntered, setHasCandleSectionEntered] = useState(false);
@@ -438,6 +439,7 @@ function AdminDashboard() {
     return window.matchMedia('(max-width: 639px)').matches;
   });
   const [isManagerFormModalOpen, setIsManagerFormModalOpen] = useState(false);
+  const [managerModalTopOffset, setManagerModalTopOffset] = useState(172);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -874,9 +876,49 @@ function AdminDashboard() {
     }
   };
 
+  const updateManagerModalTopOffset = useCallback(() => {
+    if (typeof window === 'undefined' || !isManagerPhone) {
+      return;
+    }
+
+    const navBottom = dashboardSectionNavRef.current?.getBoundingClientRect?.().bottom;
+    const safeTop = Number.isFinite(navBottom) ? navBottom + 10 : 172;
+    const clampedTop = Math.max(
+      88,
+      Math.min(Math.round(safeTop), window.innerHeight - 120),
+    );
+
+    setManagerModalTopOffset(clampedTop);
+  }, [isManagerPhone]);
+
+  useEffect(() => {
+    if (!isManagerPhone || !isManagerFormModalOpen || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const handleViewportChange = () => {
+      updateManagerModalTopOffset();
+    };
+
+    handleViewportChange();
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('scroll', handleViewportChange, { passive: true });
+
+    return () => {
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange);
+    };
+  }, [isManagerPhone, isManagerFormModalOpen, updateManagerModalTopOffset]);
+
   const openManagerFormModalIfPhone = () => {
     if (isManagerPhone) {
+      updateManagerModalTopOffset();
       setIsManagerFormModalOpen(true);
+      if (typeof window !== 'undefined') {
+        window.requestAnimationFrame(() => {
+          updateManagerModalTopOffset();
+        });
+      }
     }
   };
 
@@ -1654,7 +1696,10 @@ function AdminDashboard() {
         </div>
 
         {!loading && (
-          <div className="sticky top-[124px] sm:top-[96px] z-20 mt-5 sm:mt-2 mb-8">
+          <div
+            ref={dashboardSectionNavRef}
+            className="sticky top-[124px] sm:top-[96px] z-20 mt-5 sm:mt-2 mb-8"
+          >
             <div className="rounded-xl border border-white/10 bg-slate-900/75 backdrop-blur-md px-2 py-2.5 sm:py-2 overflow-x-auto">
               <div className="inline-flex items-center gap-2 min-w-max">
                 {dashboardSectionNav.map((section) => (
@@ -2479,7 +2524,8 @@ function AdminDashboard() {
                 <button
                   type="button"
                   onClick={closeManagerFormModal}
-                  className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-sm"
+                  className="fixed inset-x-0 bottom-0 z-[70] bg-slate-950/80 backdrop-blur-sm"
+                  style={{ top: `${managerModalTopOffset}px` }}
                   aria-label="Close form popup"
                 />
               )}
@@ -2492,10 +2538,15 @@ function AdminDashboard() {
                     className={`${
                       isManagerPhone
                         ? isManagerFormModalOpen
-                          ? 'fixed inset-0 z-[75] flex items-center justify-center p-3'
+                          ? 'fixed inset-x-0 bottom-0 z-[75] flex items-start justify-center overflow-y-auto p-3 pt-4'
                           : 'hidden'
                         : ''
                     }`}
+                    style={
+                      isManagerPhone && isManagerFormModalOpen
+                        ? { top: `${managerModalTopOffset}px` }
+                        : undefined
+                    }
                   >
                   <form
                     onSubmit={handleCustomerSubmit}
@@ -2760,10 +2811,15 @@ function AdminDashboard() {
                     className={`${
                       isManagerPhone
                         ? isManagerFormModalOpen
-                          ? 'fixed inset-0 z-[75] flex items-center justify-center p-3'
+                          ? 'fixed inset-x-0 bottom-0 z-[75] flex items-start justify-center overflow-y-auto p-3 pt-4'
                           : 'hidden'
                         : ''
                     }`}
+                    style={
+                      isManagerPhone && isManagerFormModalOpen
+                        ? { top: `${managerModalTopOffset}px` }
+                        : undefined
+                    }
                   >
                   <form
                     onSubmit={handleBookSubmit}
@@ -3094,10 +3150,15 @@ function AdminDashboard() {
                     className={`${
                       isManagerPhone
                         ? isManagerFormModalOpen
-                          ? 'fixed inset-0 z-[75] flex items-center justify-center p-3'
+                          ? 'fixed inset-x-0 bottom-0 z-[75] flex items-start justify-center overflow-y-auto p-3 pt-4'
                           : 'hidden'
                         : ''
                     }`}
+                    style={
+                      isManagerPhone && isManagerFormModalOpen
+                        ? { top: `${managerModalTopOffset}px` }
+                        : undefined
+                    }
                   >
                   <form
                     onSubmit={handleCategorySubmit}
@@ -3283,10 +3344,15 @@ function AdminDashboard() {
                     className={`${
                       isManagerPhone
                         ? isManagerFormModalOpen
-                          ? 'fixed inset-0 z-[75] flex items-center justify-center p-3'
+                          ? 'fixed inset-x-0 bottom-0 z-[75] flex items-start justify-center overflow-y-auto p-3 pt-4'
                           : 'hidden'
                         : ''
                     }`}
+                    style={
+                      isManagerPhone && isManagerFormModalOpen
+                        ? { top: `${managerModalTopOffset}px` }
+                        : undefined
+                    }
                   >
                   <form
                     onSubmit={handleAuthorSubmit}

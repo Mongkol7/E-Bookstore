@@ -45,20 +45,20 @@ function BookSearchControls({
 
   return (
     <div
-      className={`rounded-xl border border-slate-800/60 bg-slate-900/40 p-3 sm:p-4 ${className}`.trim()}
+      className={`rounded-xl border border-slate-800/60 bg-slate-900/40 p-2.5 sm:p-4 ${className}`.trim()}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
         <input
           type="text"
           value={searchText}
           onChange={(event) => onSearchTextChange(event.target.value)}
           placeholder={searchPlaceholder}
-          className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+          className="order-4 w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-2.5 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 sm:order-1 sm:px-3 sm:py-2.5 sm:text-sm"
         />
         <select
           value={searchScope}
           onChange={(event) => onSearchScopeChange(event.target.value)}
-          className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+          className="order-1 w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-2.5 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 sm:order-2 sm:px-3 sm:py-2.5 sm:text-sm"
         >
           {scopeOptions.map((option) => (
             <option
@@ -73,7 +73,7 @@ function BookSearchControls({
         <select
           value={filterType}
           onChange={(event) => onFilterTypeChange(event.target.value)}
-          className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+          className="order-2 w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-2.5 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 sm:order-3 sm:px-3 sm:py-2.5 sm:text-sm"
         >
           {filterOptions.map((option) => (
             <option
@@ -85,7 +85,7 @@ function BookSearchControls({
             </option>
           ))}
         </select>
-        <div className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-slate-300">
+        <div className="order-3 w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-2.5 py-2 text-xs text-slate-300 sm:order-4 sm:px-3 sm:py-2.5 sm:text-sm">
           {resolvedHintText}
         </div>
       </div>
