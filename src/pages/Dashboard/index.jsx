@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import StoreNavbar from '../../components/StoreNavbar';
 import { logoutAndRedirect } from '../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../utils/api';
 import Skeleton from '../../components/Skeleton';
+import BookSearchControls from '../../components/BookSearchControls';
 
 const PERIOD_OPTIONS = [
   { value: 'today', label: 'Today' },
@@ -17,6 +19,57 @@ const MANAGEMENT_TABS = [
   { key: 'books', label: 'Books', icon: '📚' },
   { key: 'categories', label: 'Categories', icon: '🏷️' },
   { key: 'authors', label: 'Authors', icon: '✍️' },
+];
+
+const BOOK_SEARCH_SCOPE_OPTIONS = [
+  { value: 'all', label: 'Search: All' },
+  { value: 'name', label: 'Search: Book Name' },
+  { value: 'author', label: 'Search: Author' },
+  { value: 'category', label: 'Search: Category' },
+];
+
+const BOOK_FILTER_OPTIONS = [
+  { value: 'none', label: 'No Filter' },
+  { value: 'categories', label: 'Categories' },
+  { value: 'authors', label: 'Authors' },
+  { value: 'price', label: 'Price' },
+  { value: 'trending', label: 'Trending (Most Sales)' },
+];
+
+const CUSTOMER_SEARCH_SCOPE_OPTIONS = [
+  { value: 'all', label: 'Search: All' },
+  { value: 'name', label: 'Search: Name' },
+  { value: 'email', label: 'Search: Email' },
+  { value: 'phone', label: 'Search: Phone' },
+];
+
+const CUSTOMER_FILTER_OPTIONS = [
+  { value: 'none', label: 'Sort: Newest' },
+  { value: 'name', label: 'Sort: Name A-Z' },
+  { value: 'email', label: 'Sort: Email A-Z' },
+];
+
+const CATEGORY_SEARCH_SCOPE_OPTIONS = [
+  { value: 'all', label: 'Search: All' },
+  { value: 'name', label: 'Search: Name' },
+];
+
+const CATEGORY_FILTER_OPTIONS = [
+  { value: 'none', label: 'Sort: Newest' },
+  { value: 'name', label: 'Sort: Name A-Z' },
+  { value: 'books', label: 'Sort: Most Books' },
+];
+
+const AUTHOR_SEARCH_SCOPE_OPTIONS = [
+  { value: 'all', label: 'Search: All' },
+  { value: 'name', label: 'Search: Name' },
+  { value: 'bio', label: 'Search: Bio' },
+];
+
+const AUTHOR_FILTER_OPTIONS = [
+  { value: 'none', label: 'Sort: Newest' },
+  { value: 'name', label: 'Sort: Name A-Z' },
+  { value: 'books', label: 'Sort: Most Books' },
 ];
 
 function getPeriodStart(period) {
@@ -61,6 +114,38 @@ function getOrderDate(order) {
 function numberValue(input) {
   const parsed = Number(input);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function escapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightMatchText(text, query, enabled = true, keyPrefix = 'hl') {
+  const source = String(text || '');
+  const cleanedQuery = String(query || '').trim();
+
+  if (!enabled || !cleanedQuery) {
+    return source;
+  }
+
+  const matcher = new RegExp(`(${escapeRegExp(cleanedQuery)})`, 'ig');
+  const parts = source.split(matcher);
+  const normalizedQuery = cleanedQuery.toLowerCase();
+
+  return parts.map((part, index) =>
+    part.toLowerCase() === normalizedQuery ? (
+      <mark
+        key={`${keyPrefix}-mark-${index}`}
+        className="bg-emerald-400/30 text-emerald-200 rounded px-0.5"
+      >
+        {part}
+      </mark>
+    ) : (
+      <React.Fragment key={`${keyPrefix}-text-${index}`}>
+        {part}
+      </React.Fragment>
+    ),
+  );
 }
 
 function getOrderOwnerLabel(order) {
@@ -307,6 +392,23 @@ function AdminDashboard() {
     image: '',
     published_date: '',
   });
+  const [managerBookSearchText, setManagerBookSearchText] = useState('');
+  const [managerBookSearchScope, setManagerBookSearchScope] = useState('all');
+  const [managerBookFilterType, setManagerBookFilterType] = useState('none');
+  const [managerCustomerSearchText, setManagerCustomerSearchText] = useState('');
+  const [managerCustomerSearchScope, setManagerCustomerSearchScope] =
+    useState('all');
+  const [managerCustomerFilterType, setManagerCustomerFilterType] =
+    useState('none');
+  const [managerCategorySearchText, setManagerCategorySearchText] = useState('');
+  const [managerCategorySearchScope, setManagerCategorySearchScope] =
+    useState('all');
+  const [managerCategoryFilterType, setManagerCategoryFilterType] =
+    useState('none');
+  const [managerAuthorSearchText, setManagerAuthorSearchText] = useState('');
+  const [managerAuthorSearchScope, setManagerAuthorSearchScope] =
+    useState('all');
+  const [managerAuthorFilterType, setManagerAuthorFilterType] = useState('none');
   const [lowStockRestockByBookId, setLowStockRestockByBookId] = useState({});
   const [activeRestockBookId, setActiveRestockBookId] = useState(null);
 
@@ -329,6 +431,33 @@ function AdminDashboard() {
   const [pendingRevenueReplay, setPendingRevenueReplay] = useState(true);
   const [pendingBreakdownReplay, setPendingBreakdownReplay] = useState(true);
   const [pendingCandleReplay, setPendingCandleReplay] = useState(true);
+  const [isManagerPhone, setIsManagerPhone] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.matchMedia('(max-width: 639px)').matches;
+  });
+  const [isManagerFormModalOpen, setIsManagerFormModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const media = window.matchMedia('(max-width: 639px)');
+    const handleChange = (event) => {
+      setIsManagerPhone(event.matches);
+      if (!event.matches) {
+        setIsManagerFormModalOpen(false);
+      }
+    };
+
+    setIsManagerPhone(media.matches);
+    media.addEventListener('change', handleChange);
+    return () => {
+      media.removeEventListener('change', handleChange);
+    };
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -745,6 +874,34 @@ function AdminDashboard() {
     }
   };
 
+  const openManagerFormModalIfPhone = () => {
+    if (isManagerPhone) {
+      setIsManagerFormModalOpen(true);
+    }
+  };
+
+  const closeManagerFormModal = () => {
+    setIsManagerFormModalOpen(false);
+  };
+
+  const confirmDeleteAction = async (entityLabel) => {
+    const result = await Swal.fire({
+      title: `Delete ${entityLabel}?`,
+      text: 'This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      background: '#0f172a',
+      color: '#e2e8f0',
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#334155',
+    });
+
+    return result.isConfirmed;
+  };
+
   const handleCustomerSubmit = async (event) => {
     event.preventDefault();
 
@@ -789,9 +946,15 @@ function AdminDashboard() {
       address: '',
     });
     setEditingCustomerId(null);
+    closeManagerFormModal();
   };
 
-  const handleDeleteCustomer = async (customerId) => {
+  const handleDeleteCustomer = async (customerId, customerLabel = 'customer') => {
+    const confirmed = await confirmDeleteAction(customerLabel);
+    if (!confirmed) {
+      return;
+    }
+
     const success = await submitManagerRequest(
       '/api/customers/delete',
       'DELETE',
@@ -828,9 +991,18 @@ function AdminDashboard() {
     await Promise.all([refreshCategories(), refreshBooks()]);
     setCategoryForm({ name: '' });
     setEditingCategoryId(null);
+    closeManagerFormModal();
   };
 
-  const handleDeleteCategory = async (categoryId) => {
+  const handleDeleteCategory = async (
+    categoryId,
+    categoryLabel = 'category',
+  ) => {
+    const confirmed = await confirmDeleteAction(categoryLabel);
+    if (!confirmed) {
+      return;
+    }
+
     const success = await submitManagerRequest(
       '/api/categories/delete',
       'DELETE',
@@ -870,9 +1042,15 @@ function AdminDashboard() {
     await Promise.all([refreshAuthors(), refreshBooks()]);
     setAuthorForm({ name: '', bio: '' });
     setEditingAuthorId(null);
+    closeManagerFormModal();
   };
 
-  const handleDeleteAuthor = async (authorId) => {
+  const handleDeleteAuthor = async (authorId, authorLabel = 'author') => {
+    const confirmed = await confirmDeleteAction(authorLabel);
+    if (!confirmed) {
+      return;
+    }
+
     const success = await submitManagerRequest(
       '/api/authors/delete',
       'DELETE',
@@ -939,9 +1117,15 @@ function AdminDashboard() {
       published_date: '',
     });
     setEditingBookId(null);
+    closeManagerFormModal();
   };
 
-  const handleDeleteBook = async (bookId) => {
+  const handleDeleteBook = async (bookId, bookLabel = 'book') => {
+    const confirmed = await confirmDeleteAction(bookLabel);
+    if (!confirmed) {
+      return;
+    }
+
     const success = await submitManagerRequest(
       '/api/books/delete',
       'DELETE',
@@ -1075,6 +1259,255 @@ function AdminDashboard() {
     });
     return map;
   }, [categories]);
+
+  const managerBookAuthorOptions = useMemo(() => {
+    const names = new Set();
+    books.forEach((book) => {
+      const authorName =
+        String(book?.author_name || '').trim() ||
+        String(authorNameById[String(book?.author_id ?? '')] || '').trim();
+      if (authorName) {
+        names.add(authorName);
+      }
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [books, authorNameById]);
+
+  const managerVisibleBooks = useMemo(() => {
+    const query = managerBookSearchText.trim().toLowerCase();
+    const scoped = [...books].filter((book) => {
+      if (!query) {
+        return true;
+      }
+
+      const title = String(book?.title || '').toLowerCase();
+      const author = String(
+        book?.author_name || authorNameById[String(book?.author_id ?? '')] || '',
+      ).toLowerCase();
+      const category = String(
+        book?.category_name ||
+          categoryNameById[String(book?.category_id ?? '')] ||
+          '',
+      ).toLowerCase();
+
+      if (managerBookSearchScope === 'name') {
+        return title.includes(query);
+      }
+      if (managerBookSearchScope === 'author') {
+        return author.includes(query);
+      }
+      if (managerBookSearchScope === 'category') {
+        return category.includes(query);
+      }
+
+      return (
+        title.includes(query) || author.includes(query) || category.includes(query)
+      );
+    });
+
+    if (managerBookFilterType === 'categories') {
+      return scoped.sort((a, b) =>
+        String(
+          a?.category_name || categoryNameById[String(a?.category_id ?? '')] || '',
+        ).localeCompare(
+          String(
+            b?.category_name || categoryNameById[String(b?.category_id ?? '')] || '',
+          ),
+        ),
+      );
+    }
+
+    if (managerBookFilterType === 'authors') {
+      return scoped.sort((a, b) =>
+        String(
+          a?.author_name || authorNameById[String(a?.author_id ?? '')] || '',
+        ).localeCompare(
+          String(
+            b?.author_name || authorNameById[String(b?.author_id ?? '')] || '',
+          ),
+        ),
+      );
+    }
+
+    if (managerBookFilterType === 'price') {
+      return scoped.sort(
+        (a, b) => numberValue(a?.price) - numberValue(b?.price),
+      );
+    }
+
+    if (managerBookFilterType === 'trending') {
+      return scoped.sort((a, b) => {
+        const bScore = numberValue(b?.sales_count ?? b?.sold ?? b?.rating);
+        const aScore = numberValue(a?.sales_count ?? a?.sold ?? a?.rating);
+        return bScore - aScore;
+      });
+    }
+
+    return scoped.sort((a, b) => numberValue(b?.id) - numberValue(a?.id));
+  }, [
+    books,
+    managerBookSearchText,
+    managerBookSearchScope,
+    managerBookFilterType,
+    authorNameById,
+    categoryNameById,
+  ]);
+
+  const categoryBookCountById = useMemo(() => {
+    const map = {};
+    books.forEach((book) => {
+      const key = String(book?.category_id ?? '');
+      if (!key) {
+        return;
+      }
+      map[key] = numberValue(map[key]) + 1;
+    });
+    return map;
+  }, [books]);
+
+  const authorBookCountById = useMemo(() => {
+    const map = {};
+    books.forEach((book) => {
+      const key = String(book?.author_id ?? '');
+      if (!key) {
+        return;
+      }
+      map[key] = numberValue(map[key]) + 1;
+    });
+    return map;
+  }, [books]);
+
+  const managerVisibleCustomers = useMemo(() => {
+    const query = managerCustomerSearchText.trim().toLowerCase();
+    const scoped = [...customers].filter((customer) => {
+      if (!query) {
+        return true;
+      }
+
+      const fullName = `${String(customer?.first_name || '')} ${String(customer?.last_name || '')}`
+        .trim()
+        .toLowerCase();
+      const email = String(customer?.email || '').toLowerCase();
+      const phone = String(customer?.phone || '').toLowerCase();
+
+      if (managerCustomerSearchScope === 'name') {
+        return fullName.includes(query);
+      }
+      if (managerCustomerSearchScope === 'email') {
+        return email.includes(query);
+      }
+      if (managerCustomerSearchScope === 'phone') {
+        return phone.includes(query);
+      }
+
+      return (
+        fullName.includes(query) || email.includes(query) || phone.includes(query)
+      );
+    });
+
+    if (managerCustomerFilterType === 'name') {
+      return scoped.sort((a, b) =>
+        `${String(a?.first_name || '')} ${String(a?.last_name || '')}`
+          .trim()
+          .localeCompare(
+            `${String(b?.first_name || '')} ${String(b?.last_name || '')}`.trim(),
+          ),
+      );
+    }
+
+    if (managerCustomerFilterType === 'email') {
+      return scoped.sort((a, b) =>
+        String(a?.email || '').localeCompare(String(b?.email || '')),
+      );
+    }
+
+    return scoped.sort((a, b) => numberValue(b?.id) - numberValue(a?.id));
+  }, [
+    customers,
+    managerCustomerSearchText,
+    managerCustomerSearchScope,
+    managerCustomerFilterType,
+  ]);
+
+  const managerVisibleCategories = useMemo(() => {
+    const query = managerCategorySearchText.trim().toLowerCase();
+    const scoped = [...categories].filter((category) => {
+      if (!query) {
+        return true;
+      }
+      const name = String(category?.name || '').toLowerCase();
+      return name.includes(query);
+    });
+
+    if (managerCategoryFilterType === 'name') {
+      return scoped.sort((a, b) =>
+        String(a?.name || '').localeCompare(String(b?.name || '')),
+      );
+    }
+
+    if (managerCategoryFilterType === 'books') {
+      return scoped.sort((a, b) => {
+        const bCount = numberValue(categoryBookCountById[String(b?.id ?? '')]);
+        const aCount = numberValue(categoryBookCountById[String(a?.id ?? '')]);
+        if (bCount !== aCount) {
+          return bCount - aCount;
+        }
+        return numberValue(b?.id) - numberValue(a?.id);
+      });
+    }
+
+    return scoped.sort((a, b) => numberValue(b?.id) - numberValue(a?.id));
+  }, [
+    categories,
+    managerCategorySearchText,
+    managerCategoryFilterType,
+    categoryBookCountById,
+  ]);
+
+  const managerVisibleAuthors = useMemo(() => {
+    const query = managerAuthorSearchText.trim().toLowerCase();
+    const scoped = [...authors].filter((author) => {
+      if (!query) {
+        return true;
+      }
+      const name = String(author?.name || '').toLowerCase();
+      const bio = String(author?.bio || '').toLowerCase();
+
+      if (managerAuthorSearchScope === 'name') {
+        return name.includes(query);
+      }
+      if (managerAuthorSearchScope === 'bio') {
+        return bio.includes(query);
+      }
+
+      return name.includes(query) || bio.includes(query);
+    });
+
+    if (managerAuthorFilterType === 'name') {
+      return scoped.sort((a, b) =>
+        String(a?.name || '').localeCompare(String(b?.name || '')),
+      );
+    }
+
+    if (managerAuthorFilterType === 'books') {
+      return scoped.sort((a, b) => {
+        const bCount = numberValue(authorBookCountById[String(b?.id ?? '')]);
+        const aCount = numberValue(authorBookCountById[String(a?.id ?? '')]);
+        if (bCount !== aCount) {
+          return bCount - aCount;
+        }
+        return numberValue(b?.id) - numberValue(a?.id);
+      });
+    }
+
+    return scoped.sort((a, b) => numberValue(b?.id) - numberValue(a?.id));
+  }, [
+    authors,
+    managerAuthorSearchText,
+    managerAuthorSearchScope,
+    managerAuthorFilterType,
+    authorBookCountById,
+  ]);
 
   const stats = [
     {
@@ -1994,6 +2427,7 @@ function AdminDashboard() {
                     onClick={() => {
                       setActiveManagerTab(tab.key);
                       setManagerMessage({ type: '', text: '' });
+                      setIsManagerFormModalOpen(false);
                     }}
                     className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                       activeManagerTab === tab.key
@@ -2041,19 +2475,50 @@ function AdminDashboard() {
                 </div>
               )}
 
+              {isManagerPhone && isManagerFormModalOpen && (
+                <button
+                  type="button"
+                  onClick={closeManagerFormModal}
+                  className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-sm"
+                  aria-label="Close form popup"
+                />
+              )}
+
               {/* Tab Content - Customers */}
               {activeManagerTab === 'customers' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   {/* Form */}
+                  <div
+                    className={`${
+                      isManagerPhone
+                        ? isManagerFormModalOpen
+                          ? 'fixed inset-0 z-[75] flex items-center justify-center p-3'
+                          : 'hidden'
+                        : ''
+                    }`}
+                  >
                   <form
                     onSubmit={handleCustomerSubmit}
-                    className="space-y-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 sm:p-4"
+                    className={`relative space-y-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 sm:p-4 ${
+                      isManagerPhone
+                        ? 'w-full max-w-xl max-h-[82vh] overflow-y-auto bg-slate-900/95 shadow-2xl'
+                        : ''
+                    }`}
                   >
                     <h3 className="text-base font-semibold text-white mb-3">
                       {editingCustomerId
                         ? `Edit Customer #${editingCustomerId}`
                         : 'Customer Editing'}
                     </h3>
+                    {isManagerPhone && (
+                      <button
+                        type="button"
+                        onClick={closeManagerFormModal}
+                        className="absolute top-3 right-3 px-2 py-1 rounded-md border border-white/15 text-slate-300 text-xs hover:bg-white/10"
+                      >
+                        Close
+                      </button>
+                    )}
                     {!editingCustomerId && (
                       <p className="text-xs text-slate-400 mb-1">
                         Select a customer from the list and click Edit to update details.
@@ -2159,6 +2624,7 @@ function AdminDashboard() {
                               phone: '',
                               address: '',
                             });
+                            closeManagerFormModal();
                           }}
                           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-slate-300 text-sm font-medium hover:bg-white/10 transition-all"
                         >
@@ -2167,23 +2633,47 @@ function AdminDashboard() {
                       )}
                     </div>
                   </form>
+                  </div>
 
                   {/* List */}
-                  <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-4 max-h-[500px] overflow-y-auto">
+                  <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-4">
+                    <BookSearchControls
+                      className="mb-4"
+                      searchPlaceholder="Search customers by name, email, phone"
+                      searchText={managerCustomerSearchText}
+                      onSearchTextChange={setManagerCustomerSearchText}
+                      searchScope={managerCustomerSearchScope}
+                      onSearchScopeChange={setManagerCustomerSearchScope}
+                      filterType={managerCustomerFilterType}
+                      onFilterTypeChange={setManagerCustomerFilterType}
+                      scopeOptions={CUSTOMER_SEARCH_SCOPE_OPTIONS}
+                      filterOptions={CUSTOMER_FILTER_OPTIONS}
+                      hintText={
+                        managerCustomerFilterType === 'name'
+                          ? 'Sorted by customer name'
+                          : managerCustomerFilterType === 'email'
+                            ? 'Sorted by email address'
+                            : managerCustomerSearchText.trim()
+                              ? `Searching "${managerCustomerSearchText.trim()}"`
+                              : 'Sorted by newest customer'
+                      }
+                    />
                     <h3 className="text-base font-semibold text-white mb-3">
-                      Customer List ({customers.length})
+                      Customer List ({managerVisibleCustomers.length}/
+                      {customers.length})
                     </h3>
+                    <div className="max-h-[500px] overflow-y-auto pr-1">
                     {customers.length === 0 ? (
                       <p className="text-center text-slate-400 text-sm py-8">
                         No customers found
                       </p>
+                    ) : managerVisibleCustomers.length === 0 ? (
+                      <p className="text-center text-slate-400 text-sm py-8">
+                        No matching customers found
+                      </p>
                     ) : (
                       <div className="space-y-3">
-                        {[...customers]
-                          .sort(
-                            (a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0),
-                          )
-                          .map((customer) => (
+                        {managerVisibleCustomers.map((customer) => (
                             <div
                               key={`customer-${customer?.id}`}
                               className="rounded-xl bg-white/5 border border-white/10 p-4 hover:bg-white/10 transition-all"
@@ -2191,13 +2681,31 @@ function AdminDashboard() {
                               <div className="flex items-start justify-between gap-3 mb-3">
                                 <div className="flex-1 min-w-0">
                                   <p className="font-semibold text-white text-sm mb-1">
-                                    {customer?.first_name} {customer?.last_name}
+                                    {highlightMatchText(
+                                      `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim(),
+                                      managerCustomerSearchText,
+                                      managerCustomerSearchScope === 'all' ||
+                                        managerCustomerSearchScope === 'name',
+                                      `customer-name-${customer?.id}`,
+                                    )}
                                   </p>
                                   <p className="text-xs text-slate-400 truncate">
-                                    {customer?.email}
+                                    {highlightMatchText(
+                                      customer?.email || '',
+                                      managerCustomerSearchText,
+                                      managerCustomerSearchScope === 'all' ||
+                                        managerCustomerSearchScope === 'email',
+                                      `customer-email-${customer?.id}`,
+                                    )}
                                   </p>
                                   <p className="text-xs text-slate-500 mt-1">
-                                    {customer?.phone || 'No phone'}
+                                    {highlightMatchText(
+                                      customer?.phone || 'No phone',
+                                      managerCustomerSearchText,
+                                      managerCustomerSearchScope === 'all' ||
+                                        managerCustomerSearchScope === 'phone',
+                                      `customer-phone-${customer?.id}`,
+                                    )}
                                   </p>
                                 </div>
                                 <span className="px-2 py-1 bg-white/5 rounded-lg text-xs text-slate-400">
@@ -2217,6 +2725,7 @@ function AdminDashboard() {
                                       phone: customer?.phone || '',
                                       address: customer?.address || '',
                                     });
+                                    openManagerFormModalIfPhone();
                                   }}
                                   className="flex-1 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-all"
                                 >
@@ -2225,13 +2734,11 @@ function AdminDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (
-                                      window.confirm('Delete this customer?')
-                                    ) {
-                                      void handleDeleteCustomer(
-                                        Number(customer?.id),
-                                      );
-                                    }
+                                    void handleDeleteCustomer(
+                                      Number(customer?.id),
+                                      `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() ||
+                                        'customer',
+                                    );
                                   }}
                                   className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all"
                                 >
@@ -2242,21 +2749,44 @@ function AdminDashboard() {
                           ))}
                       </div>
                     )}
+                    </div>
                   </div>
                 </div>
               )}
 
               {activeManagerTab === 'books' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <div
+                    className={`${
+                      isManagerPhone
+                        ? isManagerFormModalOpen
+                          ? 'fixed inset-0 z-[75] flex items-center justify-center p-3'
+                          : 'hidden'
+                        : ''
+                    }`}
+                  >
                   <form
                     onSubmit={handleBookSubmit}
-                    className="space-y-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 sm:p-4"
+                    className={`relative space-y-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 sm:p-4 ${
+                      isManagerPhone
+                        ? 'w-full max-w-xl max-h-[82vh] overflow-y-auto bg-slate-900/95 shadow-2xl'
+                        : ''
+                    }`}
                   >
                     <h3 className="text-base font-semibold text-white mb-3">
                       {editingBookId
                         ? `Edit Book #${editingBookId}`
                         : 'Add New Book'}
                     </h3>
+                    {isManagerPhone && (
+                      <button
+                        type="button"
+                        onClick={closeManagerFormModal}
+                        className="absolute top-3 right-3 px-2 py-1 rounded-md border border-white/15 text-slate-300 text-xs hover:bg-white/10"
+                      >
+                        Close
+                      </button>
+                    )}
                     <input
                       value={bookForm.title}
                       onChange={(e) =>
@@ -2402,6 +2932,7 @@ function AdminDashboard() {
                               image: '',
                               published_date: '',
                             });
+                            closeManagerFormModal();
                           }}
                           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-slate-300 text-sm font-medium hover:bg-white/10 transition-all"
                         >
@@ -2410,22 +2941,61 @@ function AdminDashboard() {
                       )}
                     </div>
                   </form>
+                  </div>
 
-                  <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-4 max-h-[500px] overflow-y-auto">
+                  <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-4">
+                    {isManagerPhone && (
+                      <div className="mb-4 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingBookId(null);
+                          setBookForm({
+                            title: '',
+                            description: '',
+                            price: '',
+                            stock: '',
+                            author_id: '',
+                            category_id: '',
+                            image: '',
+                            published_date: '',
+                          });
+                          openManagerFormModalIfPhone();
+                        }}
+                        className="px-3 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+                      >
+                        Add Book
+                      </button>
+                      </div>
+                    )}
+                    <BookSearchControls
+                      className="mb-4"
+                      searchPlaceholder="Search books by title, author, category"
+                      searchText={managerBookSearchText}
+                      onSearchTextChange={setManagerBookSearchText}
+                      searchScope={managerBookSearchScope}
+                      onSearchScopeChange={setManagerBookSearchScope}
+                      filterType={managerBookFilterType}
+                      onFilterTypeChange={setManagerBookFilterType}
+                      scopeOptions={BOOK_SEARCH_SCOPE_OPTIONS}
+                      filterOptions={BOOK_FILTER_OPTIONS}
+                      authorCount={managerBookAuthorOptions.length}
+                    />
                     <h3 className="text-base font-semibold text-white mb-3">
-                      Book List ({books.length})
+                      Book List ({managerVisibleBooks.length}/{books.length})
                     </h3>
+                    <div className="max-h-[500px] overflow-y-auto pr-1">
                     {books.length === 0 ? (
                       <p className="text-center text-slate-400 text-sm py-8">
                         No books found
                       </p>
+                    ) : managerVisibleBooks.length === 0 ? (
+                      <p className="text-center text-slate-400 text-sm py-8">
+                        No matching books found
+                      </p>
                     ) : (
                       <div className="space-y-3">
-                        {[...books]
-                          .sort(
-                            (a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0),
-                          )
-                          .map((book) => (
+                        {managerVisibleBooks.map((book) => (
                             <div
                               key={`book-${book?.id}`}
                               className="rounded-xl bg-white/5 border border-white/10 p-4 hover:bg-white/10 transition-all"
@@ -2433,16 +3003,34 @@ function AdminDashboard() {
                               <div className="flex items-start justify-between gap-3 mb-3">
                                 <div className="flex-1 min-w-0">
                                   <p className="font-semibold text-white text-sm mb-1 truncate">
-                                    {book?.title}
+                                    {highlightMatchText(
+                                      book?.title || '',
+                                      managerBookSearchText,
+                                      managerBookSearchScope === 'all' ||
+                                        managerBookSearchScope === 'name',
+                                      `book-title-${book?.id}`,
+                                    )}
                                   </p>
                                   <p className="text-xs text-slate-400">
-                                    {authorNameById[
-                                      String(book?.author_id ?? '')
-                                    ] || 'Unknown'}{' '}
+                                    {highlightMatchText(
+                                      authorNameById[
+                                        String(book?.author_id ?? '')
+                                      ] || 'Unknown',
+                                      managerBookSearchText,
+                                      managerBookSearchScope === 'all' ||
+                                        managerBookSearchScope === 'author',
+                                      `book-author-${book?.id}`,
+                                    )}{' '}
                                     •{' '}
-                                    {categoryNameById[
-                                      String(book?.category_id ?? '')
-                                    ] || 'Unknown'}
+                                    {highlightMatchText(
+                                      categoryNameById[
+                                        String(book?.category_id ?? '')
+                                      ] || 'Unknown',
+                                      managerBookSearchText,
+                                      managerBookSearchScope === 'all' ||
+                                        managerBookSearchScope === 'category',
+                                      `book-category-${book?.id}`,
+                                    )}
                                   </p>
                                   <p className="text-xs text-emerald-400 mt-1">
                                     ${numberValue(book?.price).toFixed(2)} •
@@ -2472,6 +3060,7 @@ function AdminDashboard() {
                                         book?.published_date || '',
                                       ).split('T')[0],
                                     });
+                                    openManagerFormModalIfPhone();
                                   }}
                                   className="flex-1 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-all"
                                 >
@@ -2480,9 +3069,10 @@ function AdminDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (window.confirm('Delete this book?')) {
-                                      void handleDeleteBook(Number(book?.id));
-                                    }
+                                    void handleDeleteBook(
+                                      Number(book?.id),
+                                      book?.title || 'book',
+                                    );
                                   }}
                                   className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all"
                                 >
@@ -2493,21 +3083,44 @@ function AdminDashboard() {
                           ))}
                       </div>
                     )}
+                    </div>
                   </div>
                 </div>
               )}
 
               {activeManagerTab === 'categories' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <div
+                    className={`${
+                      isManagerPhone
+                        ? isManagerFormModalOpen
+                          ? 'fixed inset-0 z-[75] flex items-center justify-center p-3'
+                          : 'hidden'
+                        : ''
+                    }`}
+                  >
                   <form
                     onSubmit={handleCategorySubmit}
-                    className="space-y-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 sm:p-4"
+                    className={`relative space-y-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 sm:p-4 ${
+                      isManagerPhone
+                        ? 'w-full max-w-xl max-h-[82vh] overflow-y-auto bg-slate-900/95 shadow-2xl'
+                        : ''
+                    }`}
                   >
                     <h3 className="text-base font-semibold text-white mb-3">
                       {editingCategoryId
                         ? `Edit Category #${editingCategoryId}`
                         : 'Add New Category'}
                     </h3>
+                    {isManagerPhone && (
+                      <button
+                        type="button"
+                        onClick={closeManagerFormModal}
+                        className="absolute top-3 right-3 px-2 py-1 rounded-md border border-white/15 text-slate-300 text-xs hover:bg-white/10"
+                      >
+                        Close
+                      </button>
+                    )}
                     <input
                       value={categoryForm.name}
                       onChange={(e) =>
@@ -2536,6 +3149,7 @@ function AdminDashboard() {
                           onClick={() => {
                             setEditingCategoryId(null);
                             setCategoryForm({ name: '' });
+                            closeManagerFormModal();
                           }}
                           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-slate-300 text-sm font-medium hover:bg-white/10 transition-all"
                         >
@@ -2544,22 +3158,61 @@ function AdminDashboard() {
                       )}
                     </div>
                   </form>
+                  </div>
 
-                  <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-4 max-h-[500px] overflow-y-auto">
+                  <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-4">
+                    {isManagerPhone && (
+                      <div className="mb-4 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingCategoryId(null);
+                          setCategoryForm({ name: '' });
+                          openManagerFormModalIfPhone();
+                        }}
+                        className="px-3 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+                      >
+                        Add Category
+                      </button>
+                      </div>
+                    )}
+                    <BookSearchControls
+                      className="mb-4"
+                      searchPlaceholder="Search categories by name"
+                      searchText={managerCategorySearchText}
+                      onSearchTextChange={setManagerCategorySearchText}
+                      searchScope={managerCategorySearchScope}
+                      onSearchScopeChange={setManagerCategorySearchScope}
+                      filterType={managerCategoryFilterType}
+                      onFilterTypeChange={setManagerCategoryFilterType}
+                      scopeOptions={CATEGORY_SEARCH_SCOPE_OPTIONS}
+                      filterOptions={CATEGORY_FILTER_OPTIONS}
+                      hintText={
+                        managerCategoryFilterType === 'name'
+                          ? 'Sorted by category name'
+                          : managerCategoryFilterType === 'books'
+                            ? 'Sorted by number of books'
+                            : managerCategorySearchText.trim()
+                              ? `Searching "${managerCategorySearchText.trim()}"`
+                              : 'Sorted by newest category'
+                      }
+                    />
                     <h3 className="text-base font-semibold text-white mb-3">
-                      Category List ({categories.length})
+                      Category List ({managerVisibleCategories.length}/
+                      {categories.length})
                     </h3>
+                    <div className="max-h-[500px] overflow-y-auto pr-1">
                     {categories.length === 0 ? (
                       <p className="text-center text-slate-400 text-sm py-8">
                         No categories found
                       </p>
+                    ) : managerVisibleCategories.length === 0 ? (
+                      <p className="text-center text-slate-400 text-sm py-8">
+                        No matching categories found
+                      </p>
                     ) : (
                       <div className="space-y-3">
-                        {[...categories]
-                          .sort(
-                            (a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0),
-                          )
-                          .map((category) => (
+                        {managerVisibleCategories.map((category) => (
                             <div
                               key={`category-${category?.id}`}
                               className="rounded-xl bg-white/5 border border-white/10 p-4 hover:bg-white/10 transition-all"
@@ -2567,14 +3220,20 @@ function AdminDashboard() {
                               <div className="flex items-start justify-between gap-3 mb-3">
                                 <div className="flex-1 min-w-0">
                                   <p className="font-semibold text-white text-sm mb-1">
-                                    {category?.name}
+                                    {highlightMatchText(
+                                      category?.name || '',
+                                      managerCategorySearchText,
+                                      managerCategorySearchScope === 'all' ||
+                                        managerCategorySearchScope === 'name',
+                                      `category-name-${category?.id}`,
+                                    )}
                                   </p>
                                   <p className="text-xs text-slate-400">
-                                    {books.filter(
-                                      (book) =>
-                                        Number(book?.category_id) ===
-                                        Number(category?.id),
-                                    ).length}{' '}
+                                    {numberValue(
+                                      categoryBookCountById[
+                                        String(category?.id ?? '')
+                                      ],
+                                    )}{' '}
                                     book(s)
                                   </p>
                                 </div>
@@ -2590,6 +3249,7 @@ function AdminDashboard() {
                                     setCategoryForm({
                                       name: category?.name || '',
                                     });
+                                    openManagerFormModalIfPhone();
                                   }}
                                   className="flex-1 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-all"
                                 >
@@ -2598,13 +3258,10 @@ function AdminDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (
-                                      window.confirm('Delete this category?')
-                                    ) {
-                                      void handleDeleteCategory(
-                                        Number(category?.id),
-                                      );
-                                    }
+                                    void handleDeleteCategory(
+                                      Number(category?.id),
+                                      category?.name || 'category',
+                                    );
                                   }}
                                   className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all"
                                 >
@@ -2615,21 +3272,44 @@ function AdminDashboard() {
                           ))}
                       </div>
                     )}
+                    </div>
                   </div>
                 </div>
               )}
 
               {activeManagerTab === 'authors' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <div
+                    className={`${
+                      isManagerPhone
+                        ? isManagerFormModalOpen
+                          ? 'fixed inset-0 z-[75] flex items-center justify-center p-3'
+                          : 'hidden'
+                        : ''
+                    }`}
+                  >
                   <form
                     onSubmit={handleAuthorSubmit}
-                    className="space-y-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 sm:p-4"
+                    className={`relative space-y-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 sm:p-4 ${
+                      isManagerPhone
+                        ? 'w-full max-w-xl max-h-[82vh] overflow-y-auto bg-slate-900/95 shadow-2xl'
+                        : ''
+                    }`}
                   >
                     <h3 className="text-base font-semibold text-white mb-3">
                       {editingAuthorId
                         ? `Edit Author #${editingAuthorId}`
                         : 'Add New Author'}
                     </h3>
+                    {isManagerPhone && (
+                      <button
+                        type="button"
+                        onClick={closeManagerFormModal}
+                        className="absolute top-3 right-3 px-2 py-1 rounded-md border border-white/15 text-slate-300 text-xs hover:bg-white/10"
+                      >
+                        Close
+                      </button>
+                    )}
                     <input
                       value={authorForm.name}
                       onChange={(e) =>
@@ -2671,6 +3351,7 @@ function AdminDashboard() {
                           onClick={() => {
                             setEditingAuthorId(null);
                             setAuthorForm({ name: '', bio: '' });
+                            closeManagerFormModal();
                           }}
                           className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-slate-300 text-sm font-medium hover:bg-white/10 transition-all"
                         >
@@ -2679,22 +3360,61 @@ function AdminDashboard() {
                       )}
                     </div>
                   </form>
+                  </div>
 
-                  <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-4 max-h-[500px] overflow-y-auto">
+                  <div className="rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-4">
+                    {isManagerPhone && (
+                      <div className="mb-4 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingAuthorId(null);
+                          setAuthorForm({ name: '', bio: '' });
+                          openManagerFormModalIfPhone();
+                        }}
+                        className="px-3 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+                      >
+                        Add Author
+                      </button>
+                      </div>
+                    )}
+                    <BookSearchControls
+                      className="mb-4"
+                      searchPlaceholder="Search authors by name or bio"
+                      searchText={managerAuthorSearchText}
+                      onSearchTextChange={setManagerAuthorSearchText}
+                      searchScope={managerAuthorSearchScope}
+                      onSearchScopeChange={setManagerAuthorSearchScope}
+                      filterType={managerAuthorFilterType}
+                      onFilterTypeChange={setManagerAuthorFilterType}
+                      scopeOptions={AUTHOR_SEARCH_SCOPE_OPTIONS}
+                      filterOptions={AUTHOR_FILTER_OPTIONS}
+                      hintText={
+                        managerAuthorFilterType === 'name'
+                          ? 'Sorted by author name'
+                          : managerAuthorFilterType === 'books'
+                            ? 'Sorted by number of books'
+                            : managerAuthorSearchText.trim()
+                              ? `Searching "${managerAuthorSearchText.trim()}"`
+                              : 'Sorted by newest author'
+                      }
+                    />
                     <h3 className="text-base font-semibold text-white mb-3">
-                      Author List ({authors.length})
+                      Author List ({managerVisibleAuthors.length}/
+                      {authors.length})
                     </h3>
+                    <div className="max-h-[500px] overflow-y-auto pr-1">
                     {authors.length === 0 ? (
                       <p className="text-center text-slate-400 text-sm py-8">
                         No authors found
                       </p>
+                    ) : managerVisibleAuthors.length === 0 ? (
+                      <p className="text-center text-slate-400 text-sm py-8">
+                        No matching authors found
+                      </p>
                     ) : (
                       <div className="space-y-3">
-                        {[...authors]
-                          .sort(
-                            (a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0),
-                          )
-                          .map((author) => (
+                        {managerVisibleAuthors.map((author) => (
                             <div
                               key={`author-${author?.id}`}
                               className="rounded-xl bg-white/5 border border-white/10 p-4 hover:bg-white/10 transition-all"
@@ -2702,17 +3422,29 @@ function AdminDashboard() {
                               <div className="flex items-start justify-between gap-3 mb-3">
                                 <div className="flex-1 min-w-0">
                                   <p className="font-semibold text-white text-sm mb-1">
-                                    {author?.name}
+                                    {highlightMatchText(
+                                      author?.name || '',
+                                      managerAuthorSearchText,
+                                      managerAuthorSearchScope === 'all' ||
+                                        managerAuthorSearchScope === 'name',
+                                      `author-name-${author?.id}`,
+                                    )}
                                   </p>
                                   <p className="text-xs text-slate-400 line-clamp-2">
-                                    {author?.bio || 'No bio'}
+                                    {highlightMatchText(
+                                      author?.bio || 'No bio',
+                                      managerAuthorSearchText,
+                                      managerAuthorSearchScope === 'all' ||
+                                        managerAuthorSearchScope === 'bio',
+                                      `author-bio-${author?.id}`,
+                                    )}
                                   </p>
                                   <p className="text-xs text-slate-500 mt-1">
-                                    {books.filter(
-                                      (book) =>
-                                        Number(book?.author_id) ===
-                                        Number(author?.id),
-                                    ).length}{' '}
+                                    {numberValue(
+                                      authorBookCountById[
+                                        String(author?.id ?? '')
+                                      ],
+                                    )}{' '}
                                     book(s)
                                   </p>
                                 </div>
@@ -2729,6 +3461,7 @@ function AdminDashboard() {
                                       name: author?.name || '',
                                       bio: author?.bio || '',
                                     });
+                                    openManagerFormModalIfPhone();
                                   }}
                                   className="flex-1 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-all"
                                 >
@@ -2737,11 +3470,10 @@ function AdminDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    if (window.confirm('Delete this author?')) {
-                                      void handleDeleteAuthor(
-                                        Number(author?.id),
-                                      );
-                                    }
+                                    void handleDeleteAuthor(
+                                      Number(author?.id),
+                                      author?.name || 'author',
+                                    );
                                   }}
                                   className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all"
                                 >
@@ -2752,6 +3484,7 @@ function AdminDashboard() {
                           ))}
                       </div>
                     )}
+                    </div>
                   </div>
                 </div>
               )}

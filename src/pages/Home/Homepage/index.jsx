@@ -5,6 +5,7 @@ import { logoutAndRedirect } from '../../../utils/auth';
 import { apiFetch, parseJsonResponse } from '../../../utils/api';
 import { BookCardSkeleton } from '../../../components/Skeleton';
 import StoreNavbar from '../../../components/StoreNavbar';
+import BookSearchControls from '../../../components/BookSearchControls';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -221,69 +222,16 @@ function HomePage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8 tracking-tight">
             Featured Books
           </h2>
-          <div className="mb-5 rounded-xl border border-slate-800/60 bg-slate-900/40 p-3 sm:p-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search by book, author, category"
-                className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-              />
-              <select
-                value={searchScope}
-                onChange={(e) => setSearchScope(e.target.value)}
-                className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-              >
-                <option value="all" className="bg-slate-900">
-                  Search: All
-                </option>
-                <option value="name" className="bg-slate-900">
-                  Search: Book Name
-                </option>
-                <option value="author" className="bg-slate-900">
-                  Search: Author
-                </option>
-                <option value="category" className="bg-slate-900">
-                  Search: Category
-                </option>
-              </select>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-              >
-                <option value="none" className="bg-slate-900">
-                  No Filter
-                </option>
-                <option value="categories" className="bg-slate-900">
-                  Categories
-                </option>
-                <option value="authors" className="bg-slate-900">
-                  Authors
-                </option>
-                <option value="price" className="bg-slate-900">
-                  Price
-                </option>
-                <option value="trending" className="bg-slate-900">
-                  Trending (Most Sales)
-                </option>
-              </select>
-              <div className="w-full rounded-lg border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-sm text-slate-300">
-                {filterType === 'authors'
-                  ? `${authorOptions.length} authors available`
-                  : filterType === 'categories'
-                    ? 'Sorted by category name'
-                    : filterType === 'price'
-                      ? 'Sorted by lowest price first'
-                      : filterType === 'trending'
-                        ? 'Sorted by most sales (fallback: rating)'
-                        : searchText.trim()
-                          ? `Search "${searchText.trim()}" in ${searchScope === 'all' ? 'all fields' : searchScope}`
-                          : 'Showing default order'}
-              </div>
-            </div>
-          </div>
+          <BookSearchControls
+            className="mb-5"
+            searchText={searchText}
+            onSearchTextChange={setSearchText}
+            searchScope={searchScope}
+            onSearchScopeChange={setSearchScope}
+            filterType={filterType}
+            onFilterTypeChange={setFilterType}
+            authorCount={authorOptions.length}
+          />
           {booksLoading && (
             <p className="text-slate-300 mb-4">Loading books...</p>
           )}
