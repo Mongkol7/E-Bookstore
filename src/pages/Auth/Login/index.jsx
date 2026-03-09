@@ -193,10 +193,16 @@ function Login() {
                     )}
                   </button>
                 </div>
-                <div className="text-right text-sm mt-2">
+                <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+                  <Link
+                    to="/forgot-password"
+                    className="font-medium text-slate-300 hover:text-emerald-300"
+                  >
+                    Forgot password?
+                  </Link>
                   <Link
                     to="/signup"
-                    className="font-medium text-emerald-400 hover:text-emerald-300"
+                    className="font-medium text-emerald-400 hover:text-emerald-300 text-right"
                   >
                     Don't have an account? Sign up
                   </Link>
