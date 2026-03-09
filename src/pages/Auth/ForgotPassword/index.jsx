@@ -50,8 +50,8 @@ function ForgotPassword() {
     setError('');
     setMessage('');
 
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters.');
+    if (newPassword === '') {
+      setError('New password is required.');
       return;
     }
 
@@ -177,11 +177,10 @@ function ForgotPassword() {
                     id="new-password"
                     type="password"
                     required
-                    minLength={8}
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                     className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-slate-800/50 border border-slate-700/50 placeholder-slate-500 text-white text-sm sm:text-base rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
-                    placeholder="At least 8 characters"
+                    placeholder="Enter new password"
                   />
                 </div>
                 <div>
@@ -195,7 +194,6 @@ function ForgotPassword() {
                     id="confirm-password"
                     type="password"
                     required
-                    minLength={8}
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     className="w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-slate-800/50 border border-slate-700/50 placeholder-slate-500 text-white text-sm sm:text-base rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
